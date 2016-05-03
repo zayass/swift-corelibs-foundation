@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -322,17 +322,17 @@ private extension String {
     var httpHeaderParts: ValueWithParameters? {
         var type: String?
         var parameters: [ValueWithParameters.Parameter] = []
-        let ws = NSCharacterSet.whitespaceCharacterSet()
+        let ws = NSCharacterSet.whitespaces()
         func append(_ string: String) {
             if type == nil {
                 type = string
             } else {
-                if let r = string.rangeOfString("=") {
-                    let name = string[string.startIndex..<r.startIndex].stringByTrimmingCharactersInSet(ws)
-                    let value = string[r.endIndex..<string.endIndex].stringByTrimmingCharactersInSet(ws)
+                if let r = string.range(of: "=") {
+                    let name = string[string.startIndex..<r.lowerBound].trimmingCharacters(in: ws)
+                    let value = string[r.upperBound..<string.endIndex].trimmingCharacters(in: ws)
                     parameters.append(ValueWithParameters.Parameter(attribute: name, value: value))
                 } else {
-                    let name = string.stringByTrimmingCharactersInSet(ws)
+                    let name = string.trimmingCharacters(in: ws)
                     parameters.append(ValueWithParameters.Parameter(attribute: name, value: nil))
                 }
             }

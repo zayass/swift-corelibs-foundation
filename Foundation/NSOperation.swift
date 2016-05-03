@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -204,6 +204,7 @@ internal struct _OperationList {
     var all = [NSOperation]()
     
     mutating func insert(_ operation: NSOperation) {
+        all.append(operation)
         switch operation.queuePriority {
         case .VeryLow:
             veryLow.append(operation)
@@ -257,29 +258,31 @@ internal struct _OperationList {
     }
     
     mutating func dequeue() -> NSOperation? {
+        var result : NSOperation?
         if veryHigh.count > 0 {
-            return veryHigh.remove(at: 0)
+            result = veryHigh.remove(at: 0)
+        } else if high.count > 0 {
+            result = high.remove(at: 0)
+        } else if normal.count > 0 {
+            result = normal.remove(at: 0)
+        } else if low.count > 0 {
+            result = low.remove(at: 0)
+        } else if veryLow.count > 0 {
+            result = veryLow.remove(at: 0)
         }
-        if high.count > 0 {
-            return high.remove(at: 0)
+
+        if let idx = all.index(of: result!) {
+            all.remove(at: idx)
         }
-        if normal.count > 0 {
-            return normal.remove(at: 0)
-        }
-        if low.count > 0 {
-            return low.remove(at: 0)
-        }
-        if veryLow.count > 0 {
-            return veryLow.remove(at: 0)
-        }
-        return nil
+
+        return result
     }
     
     var count: Int {
         return all.count
     }
     
-    func map<T>(@noescape _ transform: (NSOperation) throws -> T) rethrows -> [T] {
+    func map<T>(_ transform: @noescape (NSOperation) throws -> T) rethrows -> [T] {
         return try all.map(transform)
     }
 }

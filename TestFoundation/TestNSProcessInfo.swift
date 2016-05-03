@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -57,7 +57,7 @@ class TestNSProcessInfo : XCTestCase {
     
     func test_globallyUniqueString() {
         let uuid = NSProcessInfo.processInfo().globallyUniqueString
-        let parts = uuid.bridge().componentsSeparatedByString("-")
+        let parts = uuid.bridge().components(separatedBy: "-")
         XCTAssertEqual(parts.count, 5)
         XCTAssertEqual(parts[0].bridge().length, 8)
         XCTAssertEqual(parts[1].bridge().length, 4)

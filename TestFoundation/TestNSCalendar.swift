@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -34,7 +34,7 @@ class TestNSCalendar: XCTestCase {
         
         let calendar = NSCalendar(calendarIdentifier: NSCalendarIdentifierGregorian)
         calendar?.timeZone = NSTimeZone(name: "UTC")!
-        guard let components = calendar?.components([.Year, .Month, .Day], fromDate: date) else {
+        guard let components = calendar?.components([.year, .month, .day], from: date) else {
             XCTFail("Could not get date from the calendar")
             return
         }
@@ -49,7 +49,7 @@ class TestNSCalendar: XCTestCase {
         
         let calendar = NSCalendar(calendarIdentifier: NSCalendarIdentifierHebrew)
         calendar?.timeZone = NSTimeZone(name: "UTC")!
-        guard let components = calendar?.components([.Year, .Month, .Day], fromDate: date) else {
+        guard let components = calendar?.components([.year, .month, .day], from: date) else {
             XCTFail("Could not get date from the Hebrew calendar")
             return
         }
@@ -64,7 +64,7 @@ class TestNSCalendar: XCTestCase {
         
         let calendar = NSCalendar(calendarIdentifier: NSCalendarIdentifierChinese)
         calendar?.timeZone = NSTimeZone(name: "UTC")!
-        guard let components = calendar?.components([.Year, .Month, .Day], fromDate: date) else {
+        guard let components = calendar?.components([.year, .month, .day], from: date) else {
             XCTFail("Could not get date from the Chinese calendar")
             return
         }

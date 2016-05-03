@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -782,8 +782,8 @@ public func NSStringFromRect(_ aRect: NSRect) -> String {
 
 private func _scanDoublesFromString(_ aString: String, number: Int) -> [Double] {
     let scanner = NSScanner(string: aString)
-    let digitSet = NSMutableCharacterSet.decimalDigitCharacterSet()
-    digitSet.addCharactersInString("-")
+    let digitSet = NSMutableCharacterSet.decimalDigits()
+    digitSet.addCharacters(in: "-")
     var result = [Double](repeating: 0.0, count: number)
     var index = 0
     

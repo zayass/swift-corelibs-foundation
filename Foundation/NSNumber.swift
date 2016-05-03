@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -458,8 +458,15 @@ public class NSNumber : NSValue {
     }
 
     public func descriptionWithLocale(_ locale: AnyObject?) -> String {
-        guard let aLocale = locale else { return description }
-        let formatter = CFNumberFormatterCreate(nil, (aLocale as! NSLocale)._cfObject, kCFNumberFormatterDecimalStyle)
+        let aLocale = locale
+        let formatter: CFNumberFormatter
+        if (aLocale == nil) {
+            formatter = CFNumberFormatterCreate(nil, CFLocaleCopyCurrent(), kCFNumberFormatterNoStyle)
+            CFNumberFormatterSetProperty(formatter, kCFNumberFormatterMaxFractionDigits, 15._bridgeToObject())
+
+        } else {
+            formatter = CFNumberFormatterCreate(nil, (aLocale as! NSLocale)._cfObject, kCFNumberFormatterDecimalStyle)
+        }
         return CFNumberFormatterCreateStringWithNumber(nil, formatter, self._cfObject)._swiftObject
     }
     
@@ -468,10 +475,7 @@ public class NSNumber : NSValue {
     }
     
     public override var description: String {
-        let locale = CFLocaleCopyCurrent()
-        let formatter = CFNumberFormatterCreate(nil, locale, kCFNumberFormatterDecimalStyle)
-        CFNumberFormatterSetProperty(formatter, kCFNumberFormatterMaxFractionDigits, 15._bridgeToObject())
-        return CFNumberFormatterCreateStringWithNumber(nil, formatter, self._cfObject)._swiftObject
+        return descriptionWithLocale(nil)
     }
 }
 

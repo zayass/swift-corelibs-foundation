@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -527,7 +527,7 @@ public class NSKeyedUnarchiver : NSCoder {
         Helper for NSArray/NSDictionary to dereference and decode an array of objects
      */
     internal func _decodeArrayOfObjectsForKey(_ key: String,
-                                              @noescape withBlock block: (Any) -> Void) throws {
+                                              withBlock block: @noescape (Any) -> Void) throws {
         let objectRefs : Array<Any>? = _decodeValue(forKey: key)
         
         guard let unwrappedObjectRefs = objectRefs else {
@@ -828,7 +828,7 @@ public class NSKeyedUnarchiver : NSCoder {
             break
         case .CharPtr:
             if let ns = decodeObject() as? NSString {
-                let string = ns.UTF8String! // XXX leaky
+                let string = ns.utf8String! // XXX leaky
                 unsafeBitCast(addr, to: UnsafeMutablePointer<UnsafePointer<Int8>>.self).pointee = string
             }
             break

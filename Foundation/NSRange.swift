@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -38,13 +38,13 @@ extension CFRange {
 public typealias NSRange = _NSRange
 
 extension NSRange {
-    public init(_ x: Range<Int>) {
+    public init(_ x: CountableRange<Int>) {
         location = x.startIndex
         length = x.count
     }
     
     @warn_unused_result
-    public func toRange() -> Range<Int>? {
+    public func toRange() -> CountableRange<Int>? {
         if location == NSNotFound { return nil }
         let min = location
         let max = location + length
@@ -181,7 +181,7 @@ public func NSRangeFromString(_ aString: String) -> NSRange {
         return emptyRange
     }
     let scanner = NSScanner(string: aString)
-    let digitSet = NSCharacterSet.decimalDigitCharacterSet()
+    let digitSet = NSCharacterSet.decimalDigits()
     scanner.scanUpToCharactersFromSet(digitSet)
     if scanner.atEnd {
         // fail early if there are no decimal digits

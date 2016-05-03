@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -96,7 +96,7 @@ public class NSJSONSerialization : NSObject {
     
     /* Generate JSON data from a Foundation object. If the object will not produce valid JSON then an exception will be thrown. Setting the NSJSONWritingPrettyPrinted option will generate JSON with whitespace designed to make the output more readable. If that option is not set, the most compact possible JSON will be generated. If an error occurs, the error parameter will be set and the return value will be nil. The resulting data is a encoded in UTF-8.
      */
-    public class func dataWithJSONObject(_ obj: AnyObject, options opt: NSJSONWritingOptions) throws -> NSData {
+    public class func data(withJSONObject obj: AnyObject, options opt: NSJSONWritingOptions = []) throws -> NSData {
         guard obj is NSArray || obj is NSDictionary else {
             throw NSError(domain: NSCocoaErrorDomain, code: NSCocoaError.PropertyListReadCorruptError.rawValue, userInfo: [
                 "NSDebugDescription" : "Top-level object was not NSArray or NSDictionary"
@@ -109,7 +109,7 @@ public class NSJSONSerialization : NSObject {
             pretty: opt.contains(.PrettyPrinted),
             writer: { (str: String?) in
                 if let str = str {
-                    result.append(str.bridge().cStringUsingEncoding(NSUTF8StringEncoding)!, length: str.lengthOfBytesUsingEncoding(NSUTF8StringEncoding))
+                    result.append(str.bridge().cString(using: NSUTF8StringEncoding)!, length: str.lengthOfBytes(using: NSUTF8StringEncoding))
                 }
             }
         )
@@ -123,7 +123,7 @@ public class NSJSONSerialization : NSObject {
        The data must be in one of the 5 supported encodings listed in the JSON specification: UTF-8, UTF-16LE, UTF-16BE, UTF-32LE, UTF-32BE. The data may or may not have a BOM. The most efficient encoding to use for parsing is UTF-8, so if you have a choice in encoding the data passed to this method, use UTF-8.
      */
     /// - Experiment: Note that the return type of this function is different than on Darwin Foundation (Any instead of AnyObject). This is likely to change once we have a more complete story for bridging in place.
-    public class func JSONObjectWithData(_ data: NSData, options opt: NSJSONReadingOptions) throws -> Any {
+    public class func jsonObject(with data: NSData, options opt: NSJSONReadingOptions = []) throws -> Any {
         
         let bytes = UnsafePointer<UInt8>(data.bytes)
         let encoding: NSStringEncoding
@@ -161,7 +161,7 @@ public class NSJSONSerialization : NSObject {
     
     /* Create a JSON object from JSON data stream. The stream should be opened and configured. All other behavior of this method is the same as the JSONObjectWithData:options:error: method.
      */
-    public class func JSONObjectWithStream(_ stream: NSInputStream, options opt: NSJSONReadingOptions) throws -> AnyObject {
+    public class func jsonObject(with stream: NSInputStream, options opt: NSJSONReadingOptions = []) throws -> AnyObject {
         NSUnimplemented()
     }
 }
@@ -406,6 +406,7 @@ private struct JSONReader {
     }
 
     typealias Index = Int
+    typealias IndexDistance = Int
 
     struct UnicodeSource {
         let buffer: UnsafeBufferPointer<UInt8>
@@ -467,7 +468,7 @@ private struct JSONReader {
             return input + step <= buffer.endIndex
         }
         
-        func distanceFromStart(_ index: Index) -> Index.Distance {
+        func distanceFromStart(_ index: Index) -> IndexDistance {
             return buffer.startIndex.distance(to: index) / step
         }
     }
@@ -524,7 +525,7 @@ private struct JSONReader {
     //MARK: - String Parsing
 
     func parseString(_ input: Index) throws -> (String, Index)? {
-        guard let beginIndex = try consumeStructure(Structure.QuotationMark, input: input) else {
+        guard let beginIndex = try consumeWhitespace(input).flatMap(consumeASCII(Structure.QuotationMark)) else {
             return nil
         }
         var chunkIndex: Int = beginIndex
@@ -624,24 +625,34 @@ private struct JSONReader {
         0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, // 0...9
         0x2E, 0x2D, 0x2B, 0x45, 0x65, // . - + E e
     ]
-    func parseNumber(_ input: Index) throws -> (Double, Index)? {
-        func parseDouble(_ address: UnsafePointer<UInt8>) -> (Double, Index.Distance)? {
+    func parseNumber(_ input: Index) throws -> (Any, Index)? {
+        func parseTypedNumber(_ address: UnsafePointer<UInt8>) -> (Any, IndexDistance)? {
             let startPointer = UnsafePointer<Int8>(address)
-            let endPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>(allocatingCapacity: 1)
-            defer { endPointer.deallocateCapacity(1) }
+            let intEndPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>(allocatingCapacity: 1)
+            defer { intEndPointer.deallocateCapacity(1) }
+            let doubleEndPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>(allocatingCapacity: 1)
+            defer { doubleEndPointer.deallocateCapacity(1) }
             
-            let result = strtod(startPointer, endPointer)
-            let distance = startPointer.distance(to: endPointer[0]!)
+            let intResult = strtol(startPointer, intEndPointer, 10)
+            let intDistance = startPointer.distance(to: intEndPointer[0]!)
+            let doubleResult = strtod(startPointer, doubleEndPointer)
+            let doubleDistance = startPointer.distance(to: doubleEndPointer[0]!)
             
-            guard distance > 0 else {
+            guard intDistance > 0 || doubleDistance > 0 else {
                 return nil
             }
             
-            return (result, distance)
+            if intDistance == doubleDistance {
+                return (intResult, intDistance)
+            }
+            guard doubleDistance > 0 else {
+                return nil
+            }
+            return (doubleResult, doubleDistance)
         }
         
         if source.encoding == NSUTF8StringEncoding {
-            return parseDouble(source.buffer.baseAddress!.advanced(by: input)).map { return ($0.0, input + $0.1) }
+            return parseTypedNumber(source.buffer.baseAddress!.advanced(by: input)).map { return ($0.0, input + $0.1) }
         }
         else {
             var numberCharacters = [UInt8]()
@@ -653,7 +664,7 @@ private struct JSONReader {
             
             numberCharacters.append(0)
             
-            return numberCharacters.withUnsafeBufferPointer { parseDouble($0.baseAddress!) }.map { return ($0.0, index) }
+            return numberCharacters.withUnsafeBufferPointer { parseTypedNumber($0.baseAddress!) }.map { return ($0.0, index) }
         }
     }
 

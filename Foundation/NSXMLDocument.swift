@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -61,7 +61,7 @@ public class NSXMLDocument : NSXMLNode {
         @abstract Returns a document created from either XML or HTML, if the HTMLTidy option is set. Parse errors are returned in <tt>error</tt>.
     */
     public convenience init(XMLString string: String, options mask: Int) throws {
-        guard let data = string._bridgeToObject().dataUsingEncoding(NSUTF8StringEncoding) else {
+        guard let data = string._bridgeToObject().data(using: NSUTF8StringEncoding) else {
             // TODO: Throw an error
             fatalError("String: '\(string)' could not be converted to NSData using UTF-8 encoding")
         }
@@ -311,7 +311,7 @@ public class NSXMLDocument : NSXMLNode {
         let string = XMLStringWithOptions(options)
         // TODO: support encodings other than UTF-8
 
-        return string._bridgeToObject().dataUsingEncoding(NSUTF8StringEncoding) ?? NSData()
+        return string._bridgeToObject().data(using: NSUTF8StringEncoding) ?? NSData()
     }
 
     /*!

@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -105,7 +105,7 @@ internal class NSConcreteValue : NSValue {
     }
     
     override var objCType : UnsafePointer<Int8> {
-        return NSString(self._typeInfo.name).UTF8String! // XXX leaky
+        return NSString(self._typeInfo.name).utf8String! // XXX leaky
     }
     
     override var classForCoder: AnyClass {

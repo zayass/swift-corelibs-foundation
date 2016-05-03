@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -79,7 +79,7 @@ class TestNSHTTPCookie: XCTestCase {
         ])
         XCTAssertNil(versionZeroCookieWithInvalidVersionOneProps?.comment)
         XCTAssertNil(versionZeroCookieWithInvalidVersionOneProps?.commentURL)
-        XCTAssert(versionZeroCookieWithInvalidVersionOneProps?.sessionOnly == true)
+        XCTAssert(versionZeroCookieWithInvalidVersionOneProps?.isSessionOnly == true)
 
         // v0 should never use NSHTTPCookieMaximumAge
         XCTAssert(
@@ -88,13 +88,13 @@ class TestNSHTTPCookie: XCTestCase {
         )
 
         XCTAssertNil(versionZeroCookieWithInvalidVersionOneProps?.portList)
-        XCTAssert(versionZeroCookieWithInvalidVersionOneProps?.secure == true)
+        XCTAssert(versionZeroCookieWithInvalidVersionOneProps?.isSecure == true)
         XCTAssert(versionZeroCookieWithInvalidVersionOneProps?.version == 0)
     }
     
     func test_RequestHeaderFields() {
         let noCookies: [NSHTTPCookie] = []
-        XCTAssertEqual(NSHTTPCookie.requestHeaderFieldsWithCookies(noCookies)["Cookie"], "")
+        XCTAssertEqual(NSHTTPCookie.requestHeaderFields(with: noCookies)["Cookie"], "")
         
         let basicCookies: [NSHTTPCookie] = [
             NSHTTPCookie(properties: [
@@ -111,7 +111,7 @@ class TestNSHTTPCookie: XCTestCase {
                 ])!,
         ]
         
-        let basicCookieString = NSHTTPCookie.requestHeaderFieldsWithCookies(basicCookies)["Cookie"]
+        let basicCookieString = NSHTTPCookie.requestHeaderFields(with: basicCookies)["Cookie"]
         XCTAssertEqual(basicCookieString, "TestCookie1=testValue1; TestCookie2=testValue2")
     }
 }

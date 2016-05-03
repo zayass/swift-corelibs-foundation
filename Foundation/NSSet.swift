@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -271,7 +271,7 @@ extension NSSet {
     public func setByAddingObjectsFromSet(_ other: Set<NSObject>) -> Set<NSObject> {
         var result = Set<NSObject>(minimumCapacity: Swift.max(count, other.count))
         if self.dynamicType === NSSet.self || self.dynamicType === NSMutableSet.self {
-            result.unionInPlace(_storage)
+            result.formUnion(_storage)
         } else {
             for case let obj as NSObject in self {
                 result.insert(obj)
@@ -283,7 +283,7 @@ extension NSSet {
     public func setByAddingObjectsFromArray(_ other: [AnyObject]) -> Set<NSObject> {
         var result = Set<NSObject>(minimumCapacity: count)
         if self.dynamicType === NSSet.self || self.dynamicType === NSMutableSet.self {
-            result.unionInPlace(_storage)
+            result.formUnion(_storage)
         } else {
             for case let obj as NSObject in self {
                 result.insert(obj)
@@ -400,7 +400,7 @@ public class NSMutableSet : NSSet {
     
     public func intersectSet(_ otherSet: Set<NSObject>) {
         if self.dynamicType === NSMutableSet.self {
-            _storage.intersectInPlace(otherSet)
+            _storage.formIntersection(otherSet)
         } else {
             for case let obj as NSObject in self where !otherSet.contains(obj) {
                 removeObject(obj)
@@ -410,7 +410,7 @@ public class NSMutableSet : NSSet {
     
     public func minusSet(_ otherSet: Set<NSObject>) {
         if self.dynamicType === NSMutableSet.self {
-            _storage.subtractInPlace(otherSet)
+            _storage.subtract(otherSet)
         } else {
             otherSet.forEach(removeObject)
         }
@@ -426,7 +426,7 @@ public class NSMutableSet : NSSet {
     
     public func unionSet(_ otherSet: Set<NSObject>) {
         if self.dynamicType === NSMutableSet.self {
-            _storage.unionInPlace(otherSet)
+            _storage.formUnion(otherSet)
         } else {
             otherSet.forEach(addObject)
         }

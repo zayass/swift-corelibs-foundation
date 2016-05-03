@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -15,9 +15,9 @@
     import SwiftXCTest
 #endif
 
-class TestNSFileManger : XCTestCase {
+class TestNSFileManager : XCTestCase {
     
-    static var allTests: [(String, TestNSFileManger -> () throws -> Void)] {
+    static var allTests: [(String, TestNSFileManager -> () throws -> Void)] {
         return [
             ("test_createDirectory", test_createDirectory ),
             ("test_createFile", test_createFile ),
@@ -31,7 +31,7 @@ class TestNSFileManger : XCTestCase {
         ]
     }
     
-    func ignoreError(@noescape _ block: () throws -> Void) {
+    func ignoreError(_ block: @noescape () throws -> Void) {
         do { try block() } catch { }
     }
     

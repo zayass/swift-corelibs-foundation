@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -140,7 +140,7 @@ internal func _NSRegularExpressionMatch(_ context: UnsafeMutablePointer<Void>?, 
 
 extension NSRegularExpression {
     
-    /* The fundamental matching method on NSRegularExpression is a block iterator.  There are several additional convenience methods, for returning all matches at once, the number of matches, the first match, or the range of the first match.  Each match is specified by an instance of NSTextCheckingResult (of type NSTextCheckingTypeRegularExpression) in which the overall match range is given by the range property (equivalent to rangeAtIndex:0) and any capture group ranges are given by rangeAtIndex: for indexes from 1 to numberOfCaptureGroups.  {NSNotFound, 0} is used if a particular capture group does not participate in the match.
+    /* The fundamental matching method on NSRegularExpression is a block iterator.  There are several additional convenience methods, for returning all matches at once, the number of matches, the first match, or the range of the first match.  Each match is specified by an instance of NSTextCheckingResult (of type NSTextCheckingTypeRegularExpression) in which the overall match range is given by the range property (equivalent to range at:0) and any capture group ranges are given by range at: for indexes from 1 to numberOfCaptureGroups.  {NSNotFound, 0} is used if a particular capture group does not participate in the match.
     */
     
     public func enumerateMatches(in string: String, options: NSMatchingOptions, range: NSRange, using block: (NSTextCheckingResult?, NSMatchingFlags, UnsafeMutablePointer<ObjCBool>) -> Swift.Void) {
@@ -157,7 +157,7 @@ extension NSRegularExpression {
     
     public func matches(in string: String, options: NSMatchingOptions, range: NSRange) -> [NSTextCheckingResult] {
         var matches = [NSTextCheckingResult]()
-        enumerateMatches(in: string, options: options.subtract(.reportProgress).subtract(.reportCompletion), range: range) { (result: NSTextCheckingResult?, flags: NSMatchingFlags, stop: UnsafeMutablePointer<ObjCBool>) in
+        enumerateMatches(in: string, options: options.subtracting(.reportProgress).subtracting(.reportCompletion), range: range) { (result: NSTextCheckingResult?, flags: NSMatchingFlags, stop: UnsafeMutablePointer<ObjCBool>) in
             if let match = result {
                 matches.append(match)
             }
@@ -168,7 +168,7 @@ extension NSRegularExpression {
     
     public func numberOfMatches(in string: String, options: NSMatchingOptions, range: NSRange) -> Int {
         var count = 0
-        enumerateMatches(in: string, options: options.subtract(.reportProgress).subtract(.reportCompletion).union(.OmitResult), range: range) {_,_,_ in 
+        enumerateMatches(in: string, options: options.subtracting(.reportProgress).subtracting(.reportCompletion).union(.OmitResult), range: range) {_,_,_ in 
             count += 1
         }
         return count
@@ -176,7 +176,7 @@ extension NSRegularExpression {
     
     public func firstMatch(in string: String, options: NSMatchingOptions, range: NSRange) -> NSTextCheckingResult? {
         var first: NSTextCheckingResult?
-        enumerateMatches(in: string, options: options.subtract(.reportProgress).subtract(.reportCompletion), range: range) { (result: NSTextCheckingResult?, flags: NSMatchingFlags, stop: UnsafeMutablePointer<ObjCBool>) in
+        enumerateMatches(in: string, options: options.subtracting(.reportProgress).subtracting(.reportCompletion), range: range) { (result: NSTextCheckingResult?, flags: NSMatchingFlags, stop: UnsafeMutablePointer<ObjCBool>) in
             first = result
             stop.pointee = true
         }
@@ -185,7 +185,7 @@ extension NSRegularExpression {
     
     public func rangeOfFirstMatch(in string: String, options: NSMatchingOptions, range: NSRange) -> NSRange {
         var firstRange = NSMakeRange(NSNotFound, 0)
-        enumerateMatches(in: string, options: options.subtract(.reportProgress).subtract(.reportCompletion), range: range) { (result: NSTextCheckingResult?, flags: NSMatchingFlags, stop: UnsafeMutablePointer<ObjCBool>) in
+        enumerateMatches(in: string, options: options.subtracting(.reportProgress).subtracting(.reportCompletion), range: range) { (result: NSTextCheckingResult?, flags: NSMatchingFlags, stop: UnsafeMutablePointer<ObjCBool>) in
             if let match = result {
                 firstRange = match.range
             } else {
@@ -214,7 +214,7 @@ extension NSRegularExpression {
         var str: String = ""
         let length = string.length
         var previousRange = NSMakeRange(0, 0)
-        let results = matches(in: string, options: options.subtract(.reportProgress).subtract(.reportCompletion), range: range)
+        let results = matches(in: string, options: options.subtracting(.reportProgress).subtracting(.reportCompletion), range: range)
         let start = string.utf16.startIndex
         
         for result in results {
@@ -239,7 +239,7 @@ extension NSRegularExpression {
     }
     
     public func replaceMatches(in string: NSMutableString, options: NSMatchingOptions, range: NSRange, withTemplate templ: String) -> Int {
-        let results = matches(in: string._swiftObject, options: options.subtract(.reportProgress).subtract(.reportCompletion), range: range)
+        let results = matches(in: string._swiftObject, options: options.subtracting(.reportProgress).subtracting(.reportCompletion), range: range)
         var count = 0
         var offset = 0
         for result in results {
@@ -247,7 +247,7 @@ extension NSRegularExpression {
             let replacement = replacementString(for: result, in: string._swiftObject, offset: offset, template: templ)
             currentRnage.location += offset
             
-            string.replaceCharactersInRange(currentRnage, withString: replacement)
+            string.replaceCharacters(in: currentRnage, with: replacement)
             offset += replacement.length - currentRnage.length
             count += 1
         }
@@ -259,10 +259,10 @@ extension NSRegularExpression {
     public func replacementString(for result: NSTextCheckingResult, in string: String, offset: Int, template templ: String) -> String {
         // ??? need to consider what happens if offset takes range out of bounds due to replacement
         struct once {
-            static let characterSet = NSCharacterSet(charactersInString: "\\$")
+            static let characterSet = NSCharacterSet(charactersIn: "\\$")
         }
         let template = templ._nsObject
-        var range = template.rangeOfCharacterFromSet(once.characterSet)
+        var range = template.rangeOfCharacter(from: once.characterSet)
         if range.length > 0 {
             var numberOfDigits = 1
             var orderOfMagnitude = 10
@@ -274,16 +274,16 @@ extension NSRegularExpression {
                 orderOfMagnitude *= 10
             }
             while range.length > 0 {
-                var c = str.characterAtIndex(range.location)
+                var c = str.character(at: range.location)
                 if c == unichar(unicodeScalarLiteral: "\\") {
-                    str.deleteCharactersInRange(range)
+                    str.deleteCharacters(in: range)
                     length -= range.length
                     range.length = 1
                 } else if c == unichar(unicodeScalarLiteral: "$") {
                     var groupNumber: Int = NSNotFound
                     var idx = NSMaxRange(range)
                     while idx < length && idx < NSMaxRange(range) + numberOfDigits {
-                        c = str.characterAtIndex(idx)
+                        c = str.character(at: idx)
                         if c < unichar(unicodeScalarLiteral: "0") || c > unichar(unicodeScalarLiteral: "9") {
                             break
                         }
@@ -300,7 +300,7 @@ extension NSRegularExpression {
                         var substringRange = NSMakeRange(NSNotFound, 0)
                         var substring = ""
                         if groupNumber < numberOfRanges {
-                            substringRange = result.rangeAtIndex(groupNumber)
+                            substringRange = result.range(at: groupNumber)
                         }
                         if substringRange.location != NSNotFound {
                             substringRange.location += offset
@@ -311,7 +311,7 @@ extension NSRegularExpression {
                             let max = start.advanced(by: substringRange.location + substringRange.length)
                             substring = String(string.utf16[min..<max])
                         }
-                        str.replaceCharactersInRange(rangeToReplace, withString: substring)
+                        str.replaceCharacters(in: rangeToReplace, with: substring)
                         
                         length += substringRange.length - rangeToReplace.length
                         range.length = substringRange.length
@@ -320,7 +320,7 @@ extension NSRegularExpression {
                 if NSMaxRange(range) > length {
                     break
                 }
-                range = str.rangeOfCharacterFromSet(once.characterSet, options: [], range: NSMakeRange(NSMaxRange(range), length - NSMaxRange(range)))
+                range = str.rangeOfCharacter(from: once.characterSet, options: [], range: NSMakeRange(NSMaxRange(range), length - NSMaxRange(range)))
             }
             return str._swiftObject
         }

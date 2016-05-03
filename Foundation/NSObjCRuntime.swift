@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -249,7 +249,7 @@ private let _SwiftFoundationModuleName = "Foundation"
  */
 public func NSStringFromClass(_ aClass: AnyClass) -> String {
     let aClassName = String(reflecting: aClass).bridge()
-    let components = aClassName.componentsSeparatedByString(".")
+    let components = aClassName.components(separatedBy: ".")
     
     guard components.count == 2 else {
         fatalError("NSStringFromClass: \(String(reflecting: aClass)) is not a top-level class")
@@ -272,7 +272,7 @@ public func NSStringFromClass(_ aClass: AnyClass) -> String {
  */
 public func NSClassFromString(_ aClassName: String) -> AnyClass? {
     let aClassNameWithPrefix : String
-    let components = aClassName.bridge().componentsSeparatedByString(".")
+    let components = aClassName.bridge().components(separatedBy: ".")
     
     switch components.count {
     case 1:

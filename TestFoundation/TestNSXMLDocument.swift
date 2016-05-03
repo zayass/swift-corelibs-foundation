@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -317,7 +317,7 @@ class TestNSXMLDocument : XCTestCase {
         } catch let nsError as NSError {
             XCTAssert(nsError.code == NSXMLParserError.InternalError.rawValue)
             XCTAssert(nsError.domain == NSXMLParserErrorDomain)
-            XCTAssert((nsError.userInfo[NSLocalizedDescriptionKey] as! NSString).containsString("Element img was declared EMPTY this one has content"))
+            XCTAssert((nsError.userInfo[NSLocalizedDescriptionKey] as! NSString).contains("Element img was declared EMPTY this one has content"))
         }
 
         let plistDocString = "<?xml version='1.0' encoding='utf-8'?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"> <plist version='1.0'><dict><key>MyKey</key><string>Hello!</string><key>MyBooleanThing</key><true>foobar</true></dict></plist>"
@@ -326,7 +326,7 @@ class TestNSXMLDocument : XCTestCase {
             try plistDoc.validate()
             XCTFail("Should have thrown!")
         } catch let error as NSError {
-            XCTAssert((error.userInfo[NSLocalizedDescriptionKey] as! NSString).containsString("Element true was declared EMPTY this one has content"))
+            XCTAssert((error.userInfo[NSLocalizedDescriptionKey] as! NSString).contains("Element true was declared EMPTY this one has content"))
         }
     }
 

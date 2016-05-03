@@ -1,6 +1,6 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -32,7 +32,7 @@ XCTMain([
     testCase(TestNSDate.allTests),
     testCase(TestNSDateFormatter.allTests),
     testCase(TestNSDictionary.allTests),
-    testCase(TestNSFileManger.allTests),
+    testCase(TestNSFileManager.allTests),
     testCase(TestNSGeometry.allTests),
     testCase(TestNSHTTPCookie.allTests),
     testCase(TestNSIndexPath.allTests),
@@ -46,6 +46,7 @@ XCTMain([
     testCase(TestNSNull.allTests),
     testCase(TestNSNumber.allTests),
     testCase(TestNSNumberFormatter.allTests),
+    testCase(TestNSOperationQueue.allTests),
     testCase(TestNSOrderedSet.allTests),
     testCase(TestNSPipe.allTests),
     testCase(TestNSPredicate.allTests),
@@ -63,6 +64,7 @@ XCTMain([
     testCase(TestNSTimeZone.allTests),
     testCase(TestNSURL.allTests),
     testCase(TestNSURLComponents.allTests),
+    testCase(TestNSURLCredential.allTests),
     testCase(TestNSURLRequest.allTests),
     testCase(TestNSURLResponse.allTests),
     testCase(TestNSHTTPURLResponse.allTests),
@@ -72,4 +74,5 @@ XCTMain([
     testCase(TestNSUserDefaults.allTests),
     testCase(TestNSXMLParser.allTests),
     testCase(TestNSXMLDocument.allTests),
+    testCase(TestNSAttributedString.allTests),
 ])
