@@ -389,7 +389,7 @@ CF_EXPORT void* _CFStreamGetInfoPointer(struct _CFStream* stream) {
     return stream == NULL? NULL : stream->info;
 }
 
-CF_PRIVATE struct _CFStream *_CFStreamCreateWithConstantCallbacks(CFAllocatorRef alloc, void *info,  const struct _CFStreamCallBacks *cb, Boolean isReading) {
+CF_EXPORT struct _CFStream *_CFStreamCreateWithConstantCallbacks(CFAllocatorRef alloc, void *info,  const struct _CFStreamCallBacks *cb, Boolean isReading) {
     struct _CFStream *newStream;
     if (cb->version != 1) return NULL;
     newStream = _CFStreamCreate(alloc, isReading);
@@ -1761,7 +1761,9 @@ static CFRunLoopRef _legacyStreamRunLoop()
             pthread_attr_t attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+#if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED
             pthread_attr_set_qos_class_np(&attr, qos_class_main(), 0);
+#endif
             pthread_t workThread;
             (void) pthread_create(&workThread, &attr, _legacyStreamRunLoop_workThread, &sem);
             pthread_attr_destroy(&attr);

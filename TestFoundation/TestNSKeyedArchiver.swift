@@ -23,8 +23,8 @@ public class UserClass : NSObject, NSSecureCoding {
         return true
     }
     
-    public func encodeWithCoder(_ aCoder : NSCoder) {
-        aCoder.encodeInteger(ivar, forKey:"$ivar") // also test escaping
+    public func encode(with aCoder : NSCoder) {
+        aCoder.encode(ivar, forKey:"$ivar") // also test escaping
     }
     
     init(_ value: Int) {
@@ -32,7 +32,7 @@ public class UserClass : NSObject, NSSecureCoding {
     }
     
     public required init?(coder aDecoder: NSCoder) {
-        self.ivar = aDecoder.decodeIntegerForKey("$ivar")
+        self.ivar = aDecoder.decodeInteger(forKey: "$ivar")
     }
     
     public override var description: String {
@@ -51,7 +51,7 @@ public class UserClass : NSObject, NSSecureCoding {
 }
 
 class TestNSKeyedArchiver : XCTestCase {
-    static var allTests: [(String, TestNSKeyedArchiver -> () throws -> Void)] {
+    static var allTests: [(String, (TestNSKeyedArchiver) -> () throws -> Void)] {
         return [
             ("test_archive_array", test_archive_array),
             ("test_archive_charptr", test_archive_charptr),
@@ -76,20 +76,20 @@ class TestNSKeyedArchiver : XCTestCase {
     private func test_archive(_ encode: (NSKeyedArchiver) -> Bool,
                               decode: (NSKeyedUnarchiver) -> Bool) {
         let data = NSMutableData()
-        let archiver = NSKeyedArchiver(forWritingWithMutableData: data)
+        let archiver = NSKeyedArchiver(forWritingWith: data)
         
         XCTAssertTrue(encode(archiver))
         archiver.finishEncoding()
         
-        let unarchiver = NSKeyedUnarchiver(forReadingWithData: data)
+        let unarchiver = NSKeyedUnarchiver(forReadingWithData: data.bridge())
         XCTAssertTrue(decode(unarchiver))
     }
     
-    private func test_archive(_ object: NSObject, classes: [AnyClass], allowsSecureCoding: Bool = true, outputFormat: NSPropertyListFormat) {
+    private func test_archive(_ object: NSObject, classes: [AnyClass], allowsSecureCoding: Bool = true, outputFormat: PropertyListSerialization.PropertyListFormat) {
         test_archive({ archiver -> Bool in
                 archiver.requiresSecureCoding = allowsSecureCoding
                 archiver.outputFormat = outputFormat
-                archiver.encodeObject(object, forKey: NSKeyedArchiveRootObjectKey)
+                archiver.encode(object, forKey: NSKeyedArchiveRootObjectKey)
                 archiver.finishEncoding()
                 return true
             },
@@ -112,8 +112,8 @@ class TestNSKeyedArchiver : XCTestCase {
     
     private func test_archive(_ object: NSObject, classes: [AnyClass], allowsSecureCoding: Bool = true) {
         // test both XML and binary encodings
-        test_archive(object, classes: classes, allowsSecureCoding: allowsSecureCoding, outputFormat: NSPropertyListFormat.XMLFormat_v1_0)
-        test_archive(object, classes: classes, allowsSecureCoding: allowsSecureCoding, outputFormat: NSPropertyListFormat.BinaryFormat_v1_0)
+        test_archive(object, classes: classes, allowsSecureCoding: allowsSecureCoding, outputFormat: PropertyListSerialization.PropertyListFormat.xml)
+        test_archive(object, classes: classes, allowsSecureCoding: allowsSecureCoding, outputFormat: PropertyListSerialization.PropertyListFormat.binary)
     }
     
     private func test_archive(_ object: NSObject, allowsSecureCoding: Bool = true) {
@@ -144,14 +144,14 @@ class TestNSKeyedArchiver : XCTestCase {
 
         test_archive({ archiver -> Bool in
             array.withUnsafeBufferPointer { cArray in
-                archiver.encodeValueOfObjCType("[4i]", at: cArray.baseAddress!)
+                archiver.encodeValue(ofObjCType: "[4i]", at: cArray.baseAddress!)
             }
             return true
         },
         decode: {unarchiver -> Bool in
             var expected: Array<Int32> = [0, 0, 0, 0]
             expected.withUnsafeMutableBufferPointer {(p: inout UnsafeMutableBufferPointer<Int32>) in
-                unarchiver.decodeValueOfObjCType("[4i]", at: UnsafeMutablePointer<Void>(p.baseAddress!))
+                unarchiver.decodeValue(ofObjCType: "[4i]", at: UnsafeMutablePointer<Void>(p.baseAddress!))
             }
             XCTAssertEqual(expected, array)
             return true
@@ -159,7 +159,7 @@ class TestNSKeyedArchiver : XCTestCase {
     }
 
     func test_archive_locale() {
-        let locale = NSLocale.currentLocale()
+        let locale = Locale.currentLocale()
         test_archive(locale)
     }
     
@@ -174,7 +174,7 @@ class TestNSKeyedArchiver : XCTestCase {
     }
 
     func test_archive_mutable_dictionary() {
-        let mdictionary = NSMutableDictionary(objects: [NSNumber(integer: 1), NSNumber(integer: 2), NSNumber(integer: 3)],
+        let mdictionary = NSMutableDictionary(objects: [NSNumber(value: Int(1)), NSNumber(value: Int(2)), NSNumber(value: Int(3))],
                                               forKeys: ["one".bridge(), "two".bridge(), "three".bridge()])
         test_archive(mdictionary)
     }
@@ -203,16 +203,16 @@ class TestNSKeyedArchiver : XCTestCase {
     }
     
     func test_archive_set() {
-        let set = NSSet(array: [NSNumber(integer: 1234234),
-                                NSNumber(integer: 2374853),
+        let set = NSSet(array: [NSNumber(value: Int(1234234)),
+                                NSNumber(value: Int(2374853)),
                                 NSString(string: "foobarbarbar"),
                                 NSValue(point: NSPoint(x: CGFloat(5.0), y: CGFloat(Double(1.5))))])
         test_archive(set, classes: [NSValue.self, NSSet.self])
     }
     
     func test_archive_url() {
-        let url = NSURL(string: "index.html", relativeToURL:NSURL(string: "http://www.apple.com"))!
-        test_archive(url)
+        let url = URL(string: "index.html", relativeTo: URL(string: "http://www.apple.com"))!
+        test_archive(url.bridge())
     }
     
     func test_archive_charptr() {
@@ -222,7 +222,7 @@ class TestNSKeyedArchiver : XCTestCase {
         test_archive({ archiver -> Bool in
                 let value = NSValue(bytes: &charPtr, objCType: "*")
                 
-                archiver.encodeObject(value, forKey: "root")
+                archiver.encode(value, forKey: "root")
                 return true
             },
              decode: {unarchiver -> Bool in

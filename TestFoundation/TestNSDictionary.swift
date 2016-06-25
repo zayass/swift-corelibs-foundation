@@ -21,7 +21,7 @@ import SwiftXCTest
 
 class TestNSDictionary : XCTestCase {
     
-    static var allTests: [(String, TestNSDictionary -> () throws -> Void)] {
+    static var allTests: [(String, (TestNSDictionary) -> () throws -> Void)] {
         return [
             ("test_BasicConstruction", test_BasicConstruction),
             ("test_ArrayConstruction", test_ArrayConstruction),
@@ -59,7 +59,7 @@ class TestNSDictionary : XCTestCase {
 //        ]
 //        XCTAssertEqual(dict2.count, 2)
 //        XCTAssertEqual(dict2["foo"] as? NSString, NSString(UTF8String:"bar"))
-//        XCTAssertEqual(dict2[1] as? NSNumber, NSNumber(int: 2))
+//        XCTAssertEqual(dict2[1] as? NSNumber, NSNumber(value: 2))
     }
     
     func test_ArrayConstruction() {
@@ -115,13 +115,13 @@ class TestNSDictionary : XCTestCase {
 
         XCTAssertTrue(dict1 == dict2)
         XCTAssertTrue(dict1.isEqual(dict2))
-        XCTAssertTrue(dict1.isEqualToDictionary(dict2.bridge()))
+        XCTAssertTrue(dict1.isEqual(to: dict2.bridge()))
         XCTAssertEqual(dict1.hash, dict2.hash)
         XCTAssertEqual(dict1.hashValue, dict2.hashValue)
 
         XCTAssertFalse(dict1 == dict3)
         XCTAssertFalse(dict1.isEqual(dict3))
-        XCTAssertFalse(dict1.isEqualToDictionary(dict3.bridge()))
+        XCTAssertFalse(dict1.isEqual(to: dict3.bridge()))
 
         XCTAssertFalse(dict1.isEqual(nil))
         XCTAssertFalse(dict1.isEqual(NSObject()))

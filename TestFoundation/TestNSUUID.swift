@@ -19,7 +19,7 @@
 
 class TestNSUUID : XCTestCase {
     
-    static var allTests: [(String, TestNSUUID -> () throws -> Void)] {
+    static var allTests: [(String, (TestNSUUID) -> () throws -> Void)] {
         return [
             ("test_Equality", test_Equality),
             ("test_InvalidUUID", test_InvalidUUID),
@@ -60,7 +60,7 @@ class TestNSUUID : XCTestCase {
     
     func test_NSCoding() {
         let uuidA = NSUUID()
-        let uuidB = NSKeyedUnarchiver.unarchiveObjectWithData(NSKeyedArchiver.archivedDataWithRootObject(uuidA)) as! NSUUID
+        let uuidB = NSKeyedUnarchiver.unarchiveObjectWithData(NSKeyedArchiver.archivedData(withRootObject: uuidA)) as! NSUUID
         XCTAssertEqual(uuidA, uuidB, "Archived then unarchived uuid must be equal.")
     }
 }

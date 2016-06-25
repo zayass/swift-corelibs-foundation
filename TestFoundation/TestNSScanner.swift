@@ -21,14 +21,14 @@
 
 class TestNSScanner : XCTestCase {
 
-    static var allTests: [(String, TestNSScanner -> () throws -> Void)] {
+    static var allTests: [(String, (TestNSScanner) -> () throws -> Void)] {
         return [
             ("test_scanInteger", test_scanInteger),
         ]
     }
 
     func test_scanInteger() {
-        let scanner = NSScanner(string: "123")
+        let scanner = Scanner(string: "123")
         var value: Int = 0
         XCTAssert(scanner.scanInteger(&value), "An Integer should be found in the string `123`.")
         XCTAssertEqual(value, 123, "Scanned Integer value of the string `123` should be `123`.")

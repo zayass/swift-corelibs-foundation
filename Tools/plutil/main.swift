@@ -59,7 +59,7 @@ struct Options {
     var inputs = [String]()
 }
 
-enum OptionParseError : ErrorType {
+enum OptionParseError : ErrorProtocol {
     case UnrecognizedArgument(String)
     case MissingArgument(String)
     case InvalidFormat(String)
@@ -67,7 +67,7 @@ enum OptionParseError : ErrorType {
 
 func parseArguments(_ args: [String]) throws -> Options {
     var opts = Options()
-    var iterator = args.generate()
+    var iterator = args.makeIterator()
     while let arg = iterator.next() {
         switch arg {
             case "--":
@@ -135,19 +135,19 @@ func parseArguments(_ args: [String]) throws -> Options {
 func lint(_ options: Options) -> Int32 {
     if options.output != nil {
         print("-o is not used with -lint")
-        help()
+        let _ = help()
         return EXIT_FAILURE
     }
     
     if options.fileExtension != nil {
         print("-e is not used with -lint")
-        help()
+        let _ = help()
         return EXIT_FAILURE
     }
     
     if options.inputs.count < 1 {
         print("No files specified.")
-        help()
+        let _ = help()
         return EXIT_FAILURE
     }
     
@@ -155,17 +155,17 @@ func lint(_ options: Options) -> Int32 {
     
     var doError = false
     for file in options.inputs {
-        let data : NSData?
+        let data : Data?
         if file == "-" {
             // stdin
-            data = NSFileHandle.fileHandleWithStandardInput().readDataToEndOfFile()
+            data = FileHandle.fileHandleWithStandardInput().readDataToEndOfFile()
         } else {
-            data = NSData(contentsOfFile: file)
+            data = try? Data(contentsOf: URL(fileURLWithPath: file))
         }
         
         if let d = data {
             do {
-                let _ = try NSPropertyListSerialization.propertyListWithData(d, options: [], format: nil)
+                let _ = try PropertyListSerialization.propertyList(from: d, options: [], format: nil)
                 if !silent {
                     print("\(file): OK")
                 }
@@ -201,7 +201,7 @@ enum DisplayType {
 
 extension Dictionary {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(count: indent * 2, repeatedValue: Character(" "))
+        let indentation = String(repeating: Character(" "), count: indent * 2)
         if type == .Primary || type == .Key {
             print("\(indentation)[\n", terminator: "")
         } else {
@@ -224,7 +224,7 @@ extension Dictionary {
 
 extension Array {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(count: indent * 2, repeatedValue: Character(" "))
+        let indentation = String(repeating: Character(" "), count: indent * 2)
         if type == .Primary || type == .Key {
             print("\(indentation)[\n", terminator: "")
         } else {
@@ -242,7 +242,7 @@ extension Array {
 
 extension String {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(count: indent * 2, repeatedValue: Character(" "))
+        let indentation = String(repeating: Character(" "), count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self)\"\n", terminator: "")
         }
@@ -256,7 +256,7 @@ extension String {
 
 extension Bool {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(count: indent * 2, repeatedValue: Character(" "))
+        let indentation = String(repeating: Character(" "), count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self ? "1" : "0")\"\n", terminator: "")
         }
@@ -270,7 +270,7 @@ extension Bool {
 
 extension NSNumber {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(count: indent * 2, repeatedValue: Character(" "))
+        let indentation = String(repeating: Character(" "), count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self)\"\n", terminator: "")
         }
@@ -284,7 +284,7 @@ extension NSNumber {
 
 extension NSData {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(count: indent * 2, repeatedValue: Character(" "))
+        let indentation = String(repeating: Character(" "), count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self)\"\n", terminator: "")
         }
@@ -317,23 +317,23 @@ func displayPlist(_ plist: Any, indent: Int = 0, type: DisplayType = .Primary) {
 func display(_ options: Options) -> Int32 {
     if options.inputs.count < 1 {
         print("No files specified.")
-        help()
+        let _ = help()
         return EXIT_FAILURE
     }
     
     var doError = false
     for file in options.inputs {
-        let data : NSData?
+        let data : Data?
         if file == "-" {
             // stdin
-            data = NSFileHandle.fileHandleWithStandardInput().readDataToEndOfFile()
+            data = FileHandle.fileHandleWithStandardInput().readDataToEndOfFile()
         } else {
-            data = NSData(contentsOfFile: file)
+            data = try? Data(contentsOf: URL(fileURLWithPath: file))
         }
         
         if let d = data {
             do {
-                let plist = try NSPropertyListSerialization.propertyListWithData(d, options: [], format: nil)
+                let plist = try PropertyListSerialization.propertyList(from: d, options: [], format: nil)
                 displayPlist(plist)
             } catch {
                 print("\(file): \(error)")
@@ -354,7 +354,7 @@ func display(_ options: Options) -> Int32 {
 }
 
 func main() -> Int32 {
-    var args = NSProcessInfo.processInfo().arguments
+    var args = ProcessInfo.processInfo().arguments
     
     if args.count < 2 {
         print("No files specified.")
@@ -379,7 +379,7 @@ func main() -> Int32 {
         switch err as! OptionParseError {
             case .UnrecognizedArgument(let arg):
                 print("unrecognized option: \(arg)")
-                help()
+                let _ = help()
                 break
             case .InvalidFormat(let format):
                 print("unrecognized format \(format)\nformat should be one of: xml1 binary1 json")

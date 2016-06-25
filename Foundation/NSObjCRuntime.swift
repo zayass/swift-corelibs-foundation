@@ -84,22 +84,22 @@ extension _NSSimpleObjCType {
 // mapping of ObjC types to sizes and alignments (note that .Int is 32-bit)
 // FIXME use a generic function, unfortuantely this seems to promote the size to 8
 private let _NSObjCSizesAndAlignments : Dictionary<_NSSimpleObjCType, (Int, Int)> = [
-    .ID         : ( sizeof(AnyObject),              alignof(AnyObject)          ),
-    .Class      : ( sizeof(AnyClass),               alignof(AnyClass)           ),
-    .Char       : ( sizeof(CChar),                  alignof(CChar)              ),
-    .UChar      : ( sizeof(UInt8),                  alignof(UInt8)              ),
-    .Short      : ( sizeof(Int16),                  alignof(Int16)              ),
-    .UShort     : ( sizeof(UInt16),                 alignof(UInt16)             ),
-    .Int        : ( sizeof(Int32),                  alignof(Int32)              ),
-    .UInt       : ( sizeof(UInt32),                 alignof(UInt32)             ),
-    .Long       : ( sizeof(Int32),                  alignof(Int32)              ),
-    .ULong      : ( sizeof(UInt32),                 alignof(UInt32)             ),
-    .LongLong   : ( sizeof(Int64),                  alignof(Int64)              ),
-    .ULongLong  : ( sizeof(UInt64),                 alignof(UInt64)             ),
-    .Float      : ( sizeof(Float),                  alignof(Float)              ),
-    .Double     : ( sizeof(Double),                 alignof(Double)             ),
-    .Bool       : ( sizeof(Bool),                   alignof(Bool)               ),
-    .CharPtr    : ( sizeof(UnsafePointer<CChar>),   alignof(UnsafePointer<CChar>))
+    .ID         : ( sizeof(AnyObject.self),              alignof(AnyObject.self)          ),
+    .Class      : ( sizeof(AnyClass.self),               alignof(AnyClass.self)           ),
+    .Char       : ( sizeof(CChar.self),                  alignof(CChar.self)              ),
+    .UChar      : ( sizeof(UInt8.self),                  alignof(UInt8.self)              ),
+    .Short      : ( sizeof(Int16.self),                  alignof(Int16.self)              ),
+    .UShort     : ( sizeof(UInt16.self),                 alignof(UInt16.self)             ),
+    .Int        : ( sizeof(Int32.self),                  alignof(Int32.self)              ),
+    .UInt       : ( sizeof(UInt32.self),                 alignof(UInt32.self)             ),
+    .Long       : ( sizeof(Int32.self),                  alignof(Int32.self)              ),
+    .ULong      : ( sizeof(UInt32.self),                 alignof(UInt32.self)             ),
+    .LongLong   : ( sizeof(Int64.self),                  alignof(Int64.self)              ),
+    .ULongLong  : ( sizeof(UInt64.self),                 alignof(UInt64.self)             ),
+    .Float      : ( sizeof(Float.self),                  alignof(Float.self)              ),
+    .Double     : ( sizeof(Double.self),                 alignof(Double.self)             ),
+    .Bool       : ( sizeof(Bool.self),                   alignof(Bool.self)               ),
+    .CharPtr    : ( sizeof(UnsafePointer<CChar>.self),   alignof(UnsafePointer<CChar>.self))
 ]
 
 internal func _NSGetSizeAndAlignment(_ type: _NSSimpleObjCType,
@@ -135,19 +135,19 @@ public func NSGetSizeAndAlignment(_ typePtr: UnsafePointer<Int8>,
     return typePtr.advanced(by: 1)
 }
 
-public enum NSComparisonResult : Int {
+public enum ComparisonResult : Int {
     
-    case OrderedAscending = -1
-    case OrderedSame
-    case OrderedDescending
+    case orderedAscending = -1
+    case orderedSame
+    case orderedDescending
     
-    internal static func _fromCF(_ val: CFComparisonResult) -> NSComparisonResult {
+    internal static func _fromCF(_ val: CFComparisonResult) -> ComparisonResult {
         if val == kCFCompareLessThan {
-            return .OrderedAscending
+            return .orderedAscending
         } else if  val == kCFCompareGreaterThan {
-            return .OrderedDescending
+            return .orderedDescending
         } else {
-            return .OrderedSame
+            return .orderedSame
         }
     }
 }
@@ -156,38 +156,38 @@ public enum NSComparisonResult : Int {
 public enum NSQualityOfService : Int {
     
     /* UserInteractive QoS is used for work directly involved in providing an interactive UI such as processing events or drawing to the screen. */
-    case UserInteractive
+    case userInteractive
     
     /* UserInitiated QoS is used for performing work that has been explicitly requested by the user and for which results must be immediately presented in order to allow for further user interaction.  For example, loading an email after a user has selected it in a message list. */
-    case UserInitiated
+    case userInitiated
     
     /* Utility QoS is used for performing work which the user is unlikely to be immediately waiting for the results.  This work may have been requested by the user or initiated automatically, does not prevent the user from further interaction, often operates at user-visible timescales and may have its progress indicated to the user by a non-modal progress indicator.  This work will run in an energy-efficient manner, in deference to higher QoS work when resources are constrained.  For example, periodic content updates or bulk file operations such as media import. */
-    case Utility
+    case utility
     
     /* Background QoS is used for work that is not user initiated or visible.  In general, a user is unaware that this work is even happening and it will run in the most efficient manner while giving the most deference to higher QoS work.  For example, pre-fetching content, search indexing, backups, and syncing of data with external systems. */
-    case Background
+    case background
     
     /* Default QoS indicates the absence of QoS information.  Whenever possible QoS information will be inferred from other sources.  If such inference is not possible, a QoS between UserInitiated and Utility will be used. */
-    case Default
+    case `default`
 }
 
-public struct NSSortOptions : OptionSet {
+public struct SortOptions: OptionSet {
     public let rawValue : UInt
     public init(rawValue: UInt) { self.rawValue = rawValue }
     
-    public static let Concurrent = NSSortOptions(rawValue: UInt(1 << 0))
-    public static let Stable = NSSortOptions(rawValue: UInt(1 << 4))
+    public static let concurrent = SortOptions(rawValue: UInt(1 << 0))
+    public static let stable = SortOptions(rawValue: UInt(1 << 4))
 }
 
-public struct NSEnumerationOptions : OptionSet {
+public struct EnumerationOptions: OptionSet {
     public let rawValue : UInt
     public init(rawValue: UInt) { self.rawValue = rawValue }
     
-    public static let Concurrent = NSEnumerationOptions(rawValue: UInt(1 << 0))
-    public static let Reverse = NSEnumerationOptions(rawValue: UInt(1 << 1))
+    public static let concurrent = EnumerationOptions(rawValue: UInt(1 << 0))
+    public static let reverse = EnumerationOptions(rawValue: UInt(1 << 1))
 }
 
-public typealias NSComparator = (AnyObject, AnyObject) -> NSComparisonResult
+public typealias Comparator = (AnyObject, AnyObject) -> ComparisonResult
 
 public let NSNotFound: Int = Int.max
 

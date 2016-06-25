@@ -17,17 +17,18 @@
 
 class TestNSFileManager : XCTestCase {
     
-    static var allTests: [(String, TestNSFileManager -> () throws -> Void)] {
+    static var allTests: [(String, (TestNSFileManager) -> () throws -> Void)] {
         return [
             ("test_createDirectory", test_createDirectory ),
             ("test_createFile", test_createFile ),
+            ("test_moveFile", test_moveFile),
             ("test_fileSystemRepresentation", test_fileSystemRepresentation),
             ("test_fileAttributes", test_fileAttributes),
             ("test_setFileAttributes", test_setFileAttributes),
             ("test_directoryEnumerator", test_directoryEnumerator),
             ("test_pathEnumerator",test_pathEnumerator),
             ("test_contentsOfDirectoryAtPath", test_contentsOfDirectoryAtPath),
-            ("test_subpathsOfDirectoryAtPath", test_subpathsOfDirectoryAtPath)
+            ("test_subpathsOfDirectoryAtPath", test_subpathsOfDirectoryAtPath),
         ]
     }
     
@@ -36,8 +37,8 @@ class TestNSFileManager : XCTestCase {
     }
     
     func test_createDirectory() {
-        let fm = NSFileManager.defaultManager()
-        let path = "/tmp/testdir"
+        let fm = FileManager.default()
+        let path = "/tmp/testdir\(NSUUID().UUIDString)"
         
         ignoreError { try fm.removeItem(atPath: path) }
         
@@ -61,12 +62,12 @@ class TestNSFileManager : XCTestCase {
     }
     
     func test_createFile() {
-        let fm = NSFileManager.defaultManager()
-        let path = "/tmp/testfile"
+        let fm = FileManager.default()
+        let path = "/tmp/testfile\(NSUUID().UUIDString)"
         
         ignoreError { try fm.removeItem(atPath: path) }
         
-        XCTAssertTrue(fm.createFile(atPath: path, contents: NSData(), attributes: nil))
+        XCTAssertTrue(fm.createFile(atPath: path, contents: Data(), attributes: nil))
         
         var isDir = false
         let exists = fm.fileExists(atPath: path, isDirectory: &isDir)
@@ -79,10 +80,32 @@ class TestNSFileManager : XCTestCase {
             XCTFail("Failed to clean up file")
         }
     }
-    
+
+    func test_moveFile() {
+        let fm = FileManager.default()
+        let path = "/tmp/testfile\(NSUUID().UUIDString)"
+        let path2 = "/tmp/testfile2\(NSUUID().UUIDString)"
+
+        func cleanup() {
+            ignoreError { try fm.removeItem(atPath: path) }
+            ignoreError { try fm.removeItem(atPath: path2) }
+        }
+
+        cleanup()
+
+        XCTAssertTrue(fm.createFile(atPath: path, contents: Data(), attributes: nil))
+        defer { cleanup() }
+
+        do {
+            try fm.moveItem(atPath: path, toPath: path2)
+        } catch let error {
+            XCTFail("Failed to move file: \(error)")
+        }
+    }
+
     func test_fileSystemRepresentation() {
         let str = "☃"
-        let result = NSFileManager.defaultManager().fileSystemRepresentation(withPath: str)
+        let result = FileManager.default().fileSystemRepresentation(withPath: str)
         XCTAssertNotNil(result)
         let uintResult = UnsafePointer<UInt8>(result)
         XCTAssertEqual(uintResult[0], 0xE2)
@@ -91,12 +114,12 @@ class TestNSFileManager : XCTestCase {
     }
     
     func test_fileAttributes() {
-        let fm = NSFileManager.defaultManager()
+        let fm = FileManager.default()
         let path = "/tmp/test_fileAttributes\(NSUUID().UUIDString)"
 
         ignoreError { try fm.removeItem(atPath: path) }
         
-        XCTAssertTrue(fm.createFile(atPath: path, contents: NSData(), attributes: nil))
+        XCTAssertTrue(fm.createFile(atPath: path, contents: Data(), attributes: nil))
         
         do {
             let attrs = try fm.attributesOfItem(atPath: path)
@@ -104,22 +127,22 @@ class TestNSFileManager : XCTestCase {
             XCTAssertTrue(attrs.count > 0)
             
             let fileSize = attrs[NSFileSize] as? NSNumber
-            XCTAssertEqual(fileSize!.longLongValue, 0)
+            XCTAssertEqual(fileSize!.int64Value, 0)
             
-            let fileModificationDate = attrs[NSFileModificationDate] as? NSDate
-            XCTAssertGreaterThan(NSDate().timeIntervalSince1970, fileModificationDate!.timeIntervalSince1970)
+            let fileModificationDate = attrs[NSFileModificationDate] as? Date
+            XCTAssertGreaterThan(Date().timeIntervalSince1970, fileModificationDate!.timeIntervalSince1970)
             
             let filePosixPermissions = attrs[NSFilePosixPermissions] as? NSNumber
-            XCTAssertNotEqual(filePosixPermissions!.longLongValue, 0)
+            XCTAssertNotEqual(filePosixPermissions!.int64Value, 0)
             
             let fileReferenceCount = attrs[NSFileReferenceCount] as? NSNumber
-            XCTAssertEqual(fileReferenceCount!.longLongValue, 1)
+            XCTAssertEqual(fileReferenceCount!.int64Value, 1)
             
             let fileSystemNumber = attrs[NSFileSystemNumber] as? NSNumber
-            XCTAssertNotEqual(fileSystemNumber!.longLongValue, 0)
+            XCTAssertNotEqual(fileSystemNumber!.int64Value, 0)
             
             let fileSystemFileNumber = attrs[NSFileSystemFileNumber] as? NSNumber
-            XCTAssertNotEqual(fileSystemFileNumber!.longLongValue, 0)
+            XCTAssertNotEqual(fileSystemFileNumber!.int64Value, 0)
             
             let fileType = attrs[NSFileType] as? String
             XCTAssertEqual(fileType!, NSFileTypeRegular)
@@ -140,30 +163,37 @@ class TestNSFileManager : XCTestCase {
     
     func test_setFileAttributes() {
         let path = "/tmp/test_setFileAttributes\(NSUUID().UUIDString)"
-        let fm = NSFileManager.defaultManager()
+        let fm = FileManager.default()
         
         ignoreError { try fm.removeItem(atPath: path) }
-        XCTAssertTrue(fm.createFile(atPath: path, contents: NSData(), attributes: nil))
+        XCTAssertTrue(fm.createFile(atPath: path, contents: Data(), attributes: nil))
         
         do {
-            try fm.setAttributes([NSFilePosixPermissions:NSNumber(short: 0o0600)], ofItemAtPath: path)
+            try fm.setAttributes([NSFilePosixPermissions:NSNumber(value: Int16(0o0600))], ofItemAtPath: path)
         }
         catch { XCTFail("\(error)") }
         
         //read back the attributes
         do {
             let attributes = try fm.attributesOfItem(atPath: path)
-            XCTAssert((attributes[NSFilePosixPermissions] as? NSNumber)?.shortValue == 0o0600)
+            XCTAssert((attributes[NSFilePosixPermissions] as? NSNumber)?.int16Value == 0o0600)
         }
         catch { XCTFail("\(error)") }
+
+        do {
+            try fm.removeItem(atPath: path)
+        } catch {
+            XCTFail("Failed to clean up files")
+        }
     }
     
     func test_pathEnumerator() {
-        let fm = NSFileManager.defaultManager()
-        let basePath = "/tmp/testdir"
-        let itemPath = "/tmp/testdir/item"
-        let basePath2 = "/tmp/testdir/path2"
-        let itemPath2 = "/tmp/testdir/path2/item"
+        let fm = FileManager.default()
+        let testDirName = "testdir\(NSUUID().UUIDString)"
+        let basePath = "/tmp/\(testDirName)"
+        let itemPath = "/tmp/\(testDirName)/item"
+        let basePath2 = "/tmp/\(testDirName)/path2"
+        let itemPath2 = "/tmp/\(testDirName)/path2/item"
         
         ignoreError { try fm.removeItem(atPath: basePath) }
         
@@ -171,17 +201,17 @@ class TestNSFileManager : XCTestCase {
             try fm.createDirectory(atPath: basePath, withIntermediateDirectories: false, attributes: nil)
             try fm.createDirectory(atPath: basePath2, withIntermediateDirectories: false, attributes: nil)
 
-            fm.createFile(atPath: itemPath, contents: NSData(), attributes: nil)
-            fm.createFile(atPath: itemPath2, contents: NSData(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath, contents: Data(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath2, contents: Data(), attributes: nil)
 
         } catch _ {
             XCTFail()
         }
         
-        if let e = NSFileManager.defaultManager().enumerator(atPath: basePath) {
+        if let e = FileManager.default().enumerator(atPath: basePath) {
             let foundItems = NSMutableSet()
             while let item = e.nextObject() as? NSString {
-                foundItems.addObject(item)
+                foundItems.add(item)
             }
             XCTAssertEqual(foundItems, NSMutableSet(array: ["item".bridge(),"path2".bridge(),"path2/item".bridge()]))
         } else {
@@ -191,20 +221,21 @@ class TestNSFileManager : XCTestCase {
     }
     
     func test_directoryEnumerator() {
-        let fm = NSFileManager.defaultManager()
-        let path = "/tmp/testdir"
-        let itemPath = "/tmp/testdir/item"
+        let fm = FileManager.default()
+        let testDirName = "testdir\(NSUUID().UUIDString)"
+        let path = "/tmp/\(testDirName)"
+        let itemPath = "/tmp/\(testDirName)/item"
         
         ignoreError { try fm.removeItem(atPath: path) }
         
         do {
             try fm.createDirectory(atPath: path, withIntermediateDirectories: false, attributes: nil)
-            fm.createFile(atPath: itemPath, contents: NSData(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath, contents: Data(), attributes: nil)
         } catch _ {
             XCTFail()
         }
         
-        if let e = NSFileManager.defaultManager().enumerator(at: NSURL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [], errorHandler: nil) {
+        if let e = FileManager.default().enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [], errorHandler: nil) {
             var foundItems = [String:Int]()
             while let item = e.nextObject() as? NSURL {
                 if let p = item.path {
@@ -216,16 +247,16 @@ class TestNSFileManager : XCTestCase {
             XCTFail()
         }
         
-        let subDirPath = "/tmp/testdir/testdir2"
-        let subDirItemPath = "/tmp/testdir/testdir2/item"
+        let subDirPath = "/tmp/\(testDirName)/testdir2"
+        let subDirItemPath = "/tmp/\(testDirName)/testdir2/item"
         do {
             try fm.createDirectory(atPath: subDirPath, withIntermediateDirectories: false, attributes: nil)
-            fm.createFile(atPath: subDirItemPath, contents: NSData(), attributes: nil)
+            let _ = fm.createFile(atPath: subDirItemPath, contents: Data(), attributes: nil)
         } catch _ {
             XCTFail()
         }
         
-        if let e = NSFileManager.defaultManager().enumerator(at: NSURL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [], errorHandler: nil) {
+        if let e = FileManager.default().enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [], errorHandler: nil) {
             var foundItems = [String:Int]()
             while let item = e.nextObject() as? NSURL {
                 if let p = item.path {
@@ -239,7 +270,7 @@ class TestNSFileManager : XCTestCase {
             XCTFail()
         }
         
-        if let e = NSFileManager.defaultManager().enumerator(at: NSURL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants], errorHandler: nil) {
+        if let e = FileManager.default().enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants], errorHandler: nil) {
             var foundItems = [String:Int]()
             while let item = e.nextObject() as? NSURL {
                 if let p = item.path {
@@ -252,7 +283,7 @@ class TestNSFileManager : XCTestCase {
             XCTFail()
         }
         
-        if let e = NSFileManager.defaultManager().enumerator(at: NSURL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [], errorHandler: nil) {
+        if let e = FileManager.default().enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: [], errorHandler: nil) {
             var foundItems = [String:Int]()
             while let item = e.nextObject() as? NSURL {
                 if let p = item.path {
@@ -266,11 +297,11 @@ class TestNSFileManager : XCTestCase {
         }
         
         var didGetError = false
-        let handler : (NSURL, NSError) -> Bool = { (NSURL, NSError) in
+        let handler : (URL, NSError) -> Bool = { (URL, NSError) in
             didGetError = true
             return true
         }
-        if let e = NSFileManager.defaultManager().enumerator(at: NSURL(fileURLWithPath: "/nonexistant-path"), includingPropertiesForKeys: nil, options: [], errorHandler: handler) {
+        if let e = FileManager.default().enumerator(at: URL(fileURLWithPath: "/nonexistant-path"), includingPropertiesForKeys: nil, options: [], errorHandler: handler) {
             XCTAssertNil(e.nextObject())
         } else {
             XCTFail()
@@ -278,7 +309,7 @@ class TestNSFileManager : XCTestCase {
         XCTAssertTrue(didGetError)
         
         do {
-            let contents = try NSFileManager.defaultManager().contentsOfDirectory(at: NSURL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: []).map {
+            let contents = try FileManager.default().contentsOfDirectory(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil, options: []).map {
                 return $0.path!
             }
             XCTAssertEqual(contents.count, 2)
@@ -296,17 +327,18 @@ class TestNSFileManager : XCTestCase {
     }
     
     func test_contentsOfDirectoryAtPath() {
-        let fm = NSFileManager.defaultManager()
-        let path = "/tmp/testdir"
-        let itemPath1 = "/tmp/testdir/item"
-        let itemPath2 = "/tmp/testdir/item2"
+        let fm = FileManager.default()
+        let testDirName = "testdir\(NSUUID().UUIDString)"
+        let path = "/tmp/\(testDirName)"
+        let itemPath1 = "/tmp/\(testDirName)/item"
+        let itemPath2 = "/tmp/\(testDirName)/item2"
         
         ignoreError { try fm.removeItem(atPath: path) }
         
         do {
             try fm.createDirectory(atPath: path, withIntermediateDirectories: false, attributes: nil)
-            fm.createFile(atPath: itemPath1, contents: NSData(), attributes: nil)
-            fm.createFile(atPath: itemPath2, contents: NSData(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath1, contents: Data(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath2, contents: Data(), attributes: nil)
         } catch _ {
             XCTFail()
         }
@@ -323,7 +355,7 @@ class TestNSFileManager : XCTestCase {
         }
         
         do {
-            try fm.contentsOfDirectory(atPath: "")
+            let _ = try fm.contentsOfDirectory(atPath: "")
             
             XCTFail()
         }
@@ -339,7 +371,7 @@ class TestNSFileManager : XCTestCase {
     }
     
     func test_subpathsOfDirectoryAtPath() {
-        let fm = NSFileManager.defaultManager()
+        let fm = FileManager.default()
         let path = "/tmp/testdir"
         let path2 = "/tmp/testdir/sub"
         let itemPath1 = "/tmp/testdir/item"
@@ -350,11 +382,11 @@ class TestNSFileManager : XCTestCase {
         
         do {
             try fm.createDirectory(atPath: path, withIntermediateDirectories: false, attributes: nil)
-            fm.createFile(atPath: itemPath1, contents: NSData(), attributes: nil)
-            fm.createFile(atPath: itemPath2, contents: NSData(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath1, contents: Data(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath2, contents: Data(), attributes: nil)
             
             try fm.createDirectory(atPath: path2, withIntermediateDirectories: false, attributes: nil)
-            fm.createFile(atPath: itemPath3, contents: NSData(), attributes: nil)
+            let _ = fm.createFile(atPath: itemPath3, contents: Data(), attributes: nil)
         } catch _ {
             XCTFail()
         }
@@ -373,7 +405,7 @@ class TestNSFileManager : XCTestCase {
         }
         
         do {
-            try fm.subpathsOfDirectory(atPath: "")
+            let _ = try fm.subpathsOfDirectory(atPath: "")
             
             XCTFail()
         }

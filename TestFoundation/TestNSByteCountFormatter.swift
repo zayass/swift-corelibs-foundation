@@ -21,22 +21,22 @@
 
 class TestNSByteCountFormatter : XCTestCase {
     
-    static var allTests: [(String, TestNSByteCountFormatter -> () throws -> Void)] {
+    static var allTests: [(String, (TestNSByteCountFormatter) -> () throws -> Void)] {
         return [
             ("test_DefaultValues", test_DefaultValues)
         ]
     }
     
     func test_DefaultValues() {
-        let formatter = NSByteCountFormatter()
-        XCTAssertEqual(formatter.allowedUnits, NSByteCountFormatterUnits.UseDefault)
-        XCTAssertEqual(formatter.countStyle, NSByteCountFormatterCountStyle.File)
+        let formatter = ByteCountFormatter()
+        XCTAssertEqual(formatter.allowedUnits, ByteCountFormatter.Units.useDefault)
+        XCTAssertEqual(formatter.countStyle, ByteCountFormatter.CountStyle.file)
         XCTAssertEqual(formatter.allowsNonnumericFormatting, true)
         XCTAssertEqual(formatter.includesUnit, true)
         XCTAssertEqual(formatter.includesCount, true)
         XCTAssertEqual(formatter.includesActualByteCount, false)
-        XCTAssertEqual(formatter.adaptive, true)
+        XCTAssertEqual(formatter.isAdaptive, true)
         XCTAssertEqual(formatter.zeroPadsFractionDigits, false)
-        XCTAssertEqual(formatter.formattingContext, NSFormattingContext.Unknown)
+        XCTAssertEqual(formatter.formattingContext, Formatter.Context.unknown)
     }
 }
