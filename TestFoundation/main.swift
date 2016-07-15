@@ -57,6 +57,7 @@ XCTMain([
     testCase(TestNSRunLoop.allTests),
     testCase(TestNSScanner.allTests),
     testCase(TestNSSet.allTests),
+    testCase(TestNSStream.allTests),
     testCase(TestNSString.allTests),
 //    testCase(TestNSThread.allTests),
     testCase(TestNSTask.allTests),
@@ -78,4 +79,5 @@ XCTMain([
     testCase(TestNSAttributedString.allTests),
     testCase(TestNSMutableAttributedString.allTests),
     testCase(TestNSFileHandle.allTests),
+    testCase(TestUnitConverter.allTests),
 ])

@@ -90,14 +90,14 @@ internal func _NSXMLParserExternalEntityWithURL(_ interface: _CFXMLInterface, ur
         guard let aUrl = a else { break }
         
         var matches: Bool
-        if let aHost = aUrl.host, host = url.host {
+        if let aHost = aUrl.host, let host = url.host {
             matches = host == aHost
         } else {
             return nil
         }
         
         if matches {
-            if let aPort = aUrl.port, port = url.port {
+            if let aPort = aUrl.port, let port = url.port {
                 matches = port == aPort
             } else {
                 return nil
@@ -105,7 +105,7 @@ internal func _NSXMLParserExternalEntityWithURL(_ interface: _CFXMLInterface, ur
         }
         
         if matches {
-            if let aScheme = aUrl.scheme, scheme = url.scheme {
+            if let aScheme = aUrl.scheme, let scheme = url.scheme {
                 matches = scheme == aScheme
             } else {
                 return nil
@@ -266,12 +266,13 @@ internal func _NSXMLParserStartElementNs(_ ctx: _CFXMLInterface, localname: Unsa
             }
             let namespaceValueString = namespaces[idx + 1] != nil ? UTF8STRING(namespaces[idx + 1]!) : ""
             if reportNamespaces {
-                if let k = namespaceNameString, v = namespaceValueString {
+                if let k = namespaceNameString, let v = namespaceValueString {
                     nsDict[k] = v
                 }
             }
             if !reportQNameURI {
-                if let k = asAttrNamespaceNameString, v = namespaceValueString {
+                if let k = asAttrNamespaceNameString,
+                   let v = namespaceValueString {
                     attrDict[k] = v
                 }
             }
@@ -460,7 +461,7 @@ public class XMLParser : NSObject {
     public var allowedExternalEntityURLs: Set<URL>?
     
     internal static func currentParser() -> XMLParser? {
-        if let current = Thread.current().threadDictionary["__CurrentNSXMLParser"] {
+        if let current = Thread.current.threadDictionary["__CurrentNSXMLParser"] {
             return current as? XMLParser
         } else {
             return nil
@@ -469,9 +470,9 @@ public class XMLParser : NSObject {
     
     internal static func setCurrentParser(_ parser: XMLParser?) {
         if let p = parser {
-            Thread.current().threadDictionary["__CurrentNSXMLParser"] = p
+            Thread.current.threadDictionary["__CurrentNSXMLParser"] = p
         } else {
-            Thread.current().threadDictionary.removeValue(forKey: "__CurrentNSXMLParser")
+            Thread.current.threadDictionary.removeValue(forKey: "__CurrentNSXMLParser")
         }
     }
     

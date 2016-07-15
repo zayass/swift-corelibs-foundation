@@ -553,7 +553,7 @@ extension NSData {
     }
     
     internal func enumerateByteRangesUsingBlockRethrows(_ block: @noescape (UnsafePointer<Void>, NSRange, UnsafeMutablePointer<Bool>) throws -> Void) throws {
-        var err : ErrorProtocol? = nil
+        var err : Swift.Error? = nil
         self.enumerateBytes() { (buf, range, stop) -> Void in
             do {
                 try block(buf, range, stop)
@@ -936,9 +936,7 @@ extension NSMutableData {
     }
     
     public convenience init?(length: Int) {
-        let memory = malloc(length)
-        self.init(bytes: memory, length: length, copy: false) { buffer, amount in
-            free(buffer)
-        }
+        self.init(bytes: nil, length: 0)
+        self.length = length
     }
 }

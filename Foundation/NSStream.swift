@@ -7,6 +7,16 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
+import CoreFoundation
+
+#if os(OSX) || os(iOS)
+internal extension UInt {
+    init(_ status: CFStreamStatus) {
+        self.init(status.rawValue)
+    }
+}
+#endif
+
 extension Stream {
     public struct PropertyKey : RawRepresentable, Equatable, Hashable, Comparable {
         public private(set) var rawValue: String
@@ -60,17 +70,17 @@ public func <(lhs: Stream.PropertyKey, rhs: Stream.PropertyKey) -> Bool {
 // NSStream is an abstract class encapsulating the common API to NSInputStream and NSOutputStream.
 // Subclassers of NSInputStream and NSOutputStream must also implement these methods.
 public class Stream: NSObject {
-    
+
     public override init() {
-        
+
     }
     
     public func open() {
-        NSUnimplemented()
+        NSRequiresConcreteImplementation()
     }
     
     public func close() {
-        NSUnimplemented()
+        NSRequiresConcreteImplementation()
     }
     
     public weak var delegate: StreamDelegate?
@@ -95,7 +105,7 @@ public class Stream: NSObject {
     }
     
     public var streamStatus: Status {
-        NSUnimplemented()
+        NSRequiresConcreteImplementation()
     }
     
     /*@NSCopying */public var streamError: NSError? {
@@ -106,9 +116,12 @@ public class Stream: NSObject {
 // NSInputStream is an abstract class representing the base functionality of a read stream.
 // Subclassers are required to implement these methods.
 public class InputStream: Stream {
+
+    private var _stream: CFReadStream!
+
     // reads up to length bytes into the supplied buffer, which must be at least of size len. Returns the actual number of bytes read.
     public func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
-        NSUnimplemented()
+        return CFReadStreamRead(_stream, buffer, CFIndex(len._bridgeToObject()))
     }
     
     // returns in O(1) a pointer to the buffer in 'buffer' and by reference in 'len' how many bytes are available. This buffer is only valid until the next stream operation. Subclassers may return NO for this if it is not appropriate for the stream type. This may return NO if the buffer is not available.
@@ -118,19 +131,31 @@ public class InputStream: Stream {
     
     // returns YES if the stream has bytes available or if it impossible to tell without actually doing the read.
     public var hasBytesAvailable: Bool {
-        NSUnimplemented()
+        return CFReadStreamHasBytesAvailable(_stream)
     }
     
     public init(data: Data) {
-        NSUnimplemented()
+        _stream = CFReadStreamCreateWithData(kCFAllocatorSystemDefault, data._cfObject)
     }
     
     public init?(url: URL) {
-        NSUnimplemented()
+        _stream = CFReadStreamCreateWithFile(kCFAllocatorDefault, url._cfObject)
     }
 
     public convenience init?(fileAtPath path: String) {
-        NSUnimplemented()
+        self.init(url: URL(fileURLWithPath: path))
+    }
+
+    public override func open() {
+        CFReadStreamOpen(_stream)
+    }
+    
+    public override func close() {
+        CFReadStreamClose(_stream)
+    }
+    
+    public override var streamStatus: Status {
+        return Stream.Status(rawValue: UInt(CFReadStreamGetStatus(_stream)))!
     }
 }
 
@@ -138,34 +163,58 @@ public class InputStream: Stream {
 // Subclassers are required to implement these methods.
 // Currently this is left as named NSOutputStream due to conflicts with the standard library's text streaming target protocol named OutputStream (which ideally should be renamed)
 public class NSOutputStream : Stream {
+    
+    private  var _stream: CFWriteStream!
+    
     // writes the bytes from the specified buffer to the stream up to len bytes. Returns the number of bytes actually written.
     public func write(_ buffer: UnsafePointer<UInt8>, maxLength len: Int) -> Int {
-        NSUnimplemented()
+        return  CFWriteStreamWrite(_stream, buffer, len)
     }
     
     // returns YES if the stream can be written to or if it is impossible to tell without actually doing the write.
     public var hasSpaceAvailable: Bool {
-        NSUnimplemented()
+        return CFWriteStreamCanAcceptBytes(_stream)
     }
     
-    public init(toMemory: ()) {
-        NSUnimplemented()
+    required public init(toMemory: ()) {
+        _stream = CFWriteStreamCreateWithAllocatedBuffers(kCFAllocatorDefault, kCFAllocatorDefault)
     }
 
     public init(toBuffer buffer: UnsafeMutablePointer<UInt8>, capacity: Int) {
-        NSUnimplemented()
+        _stream = CFWriteStreamCreateWithBuffer(kCFAllocatorSystemDefault, buffer, capacity)
     }
-
+    
     public init?(url: URL, append shouldAppend: Bool) {
-        NSUnimplemented()
+        _stream = CFWriteStreamCreateWithFile(kCFAllocatorSystemDefault, url._cfObject)
+        CFWriteStreamSetProperty(_stream, kCFStreamPropertyAppendToFile, shouldAppend._cfObject)
     }
     
     public convenience init?(toFileAtPath path: String, append shouldAppend: Bool) {
-        NSUnimplemented()
+        self.init(url: URL(fileURLWithPath: path), append: shouldAppend)
+    }
+    
+    public override func open() {
+        CFWriteStreamOpen(_stream)
+    }
+    
+    public override func close() {
+        CFWriteStreamClose(_stream)
+    }
+    
+    public override var streamStatus: Status {
+        return Stream.Status(rawValue: UInt(CFWriteStreamGetStatus(_stream)))!
     }
     
     public class func outputStreamToMemory() -> Self {
-        NSUnimplemented()
+        return self.init(toMemory: ())
+    }
+    
+    public override func propertyForKey(_ key: String) -> AnyObject? {
+        return CFWriteStreamCopyProperty(_stream, key._cfObject)
+    }
+    
+    public  override func setProperty(_ property: AnyObject?, forKey key: String) -> Bool {
+        return CFWriteStreamSetProperty(_stream, key._cfObject, property)
     }
 }
 

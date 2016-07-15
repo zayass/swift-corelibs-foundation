@@ -521,7 +521,20 @@ public class NSURL: NSObject, NSSecureCoding, NSCopying {
     
     /* A string constant for the "file" URL scheme. If you are using this to compare to a URL's scheme to see if it is a file URL, you should instead use the NSURL fileURL property -- the fileURL property is much faster. */
     public var standardized: URL? {
-        NSUnimplemented()
+        guard (path != nil) else {
+            return nil
+        }
+
+        let URLComponents = NSURLComponents(string: relativeString)
+        guard ((URLComponents != nil) && (URLComponents!.path != nil)) else {
+            return nil
+        }
+        guard (URLComponents!.path!.contains("..") || URLComponents!.path!.contains(".")) else{
+            return URLComponents!.url(relativeTo: baseURL)
+        }
+
+        URLComponents!.path! = _pathByRemovingDots(pathComponents!)
+        return URLComponents!.url(relativeTo: baseURL)
     }
     
     /* Returns whether the URL's resource exists and is reachable. This method synchronously checks if the resource's backing store is reachable. Checking reachability is appropriate when making decisions that do not require other immediate operations on the resource, e.g. periodic maintenance of UI state that depends on the existence of a specific document. When performing operations such as opening a file or copying resource properties, it is more efficient to simply try the operation and handle failures. If this method returns NO, the optional error is populated. This method is currently applicable only to URLs for file system resources. For other URL types, NO is returned. Symbol is present in iOS 4, but performs no operation.
@@ -535,7 +548,11 @@ public class NSURL: NSObject, NSSecureCoding, NSCopying {
     /* Returns a file path URL that refers to the same resource as a specified URL. File path URLs use a file system style path. An error will occur if the url parameter is not a file URL. A file reference URL's resource must exist and be reachable to be converted to a file path URL. Symbol is present in iOS 4, but performs no operation.
     */
     public var filePathURL: URL? {
-        NSUnimplemented()
+        guard isFileURL else {
+            return nil
+        }
+
+        return URL(string: absoluteString)
     }
     
     override public var _cfTypeID: CFTypeID {
@@ -675,7 +692,8 @@ extension NSURL {
     public func appendingPathComponent(_ pathComponent: String) -> URL? {
         var result : URL? = appendingPathComponent(pathComponent, isDirectory: false)
         if !pathComponent.hasSuffix("/") && isFileURL {
-            if let urlWithoutDirectory = result, path = urlWithoutDirectory.path {
+            if let urlWithoutDirectory = result,
+               let path = urlWithoutDirectory.path {
                 var isDir : Bool = false
                 if FileManager.default().fileExists(atPath: path, isDirectory: &isDir) && isDir {
                     result = self.appendingPathComponent(pathComponent, isDirectory: true)
@@ -769,6 +787,38 @@ extension NSURL {
         
         return URL(fileURLWithPath: resolvedPath)
     }
+
+    private func _pathByRemovingDots(_ comps: [String]) -> String {
+        var components = comps
+        
+        if(components.last == "/") {
+            components.removeLast()
+        }
+
+        guard !components.isEmpty else {
+            return self.path!
+        }
+
+        let isAbsolutePath = components.first == "/"
+        var result : String = components.removeFirst()
+
+        for component in components {
+            switch component {
+                case ".":
+                    break
+                case ".." where isAbsolutePath:
+                    result = result.bridge().stringByDeletingLastPathComponent
+                default:
+                    result = result.bridge().stringByAppendingPathComponent(component)
+            }
+        }
+
+        if(self.path!.hasSuffix("/")) {
+            result += "/"
+        }
+
+        return result
+    }
 }
 
 // NSURLQueryItem encapsulates a single query name-value pair. The name and value strings of a query name-value pair are not percent encoded. For use with the NSURLComponents queryItems property.
@@ -783,7 +833,7 @@ public class NSURLQueryItem : NSObject, NSSecureCoding, NSCopying {
     }
     
     public func copy(with zone: NSZone? = nil) -> AnyObject {
-        NSUnimplemented()
+        return self
     }
     
     public static func supportsSecureCoding() -> Bool {

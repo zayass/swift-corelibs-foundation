@@ -167,11 +167,17 @@ public class Calendar: NSObject, NSCopying, NSSecureCoding {
     }
     
     public func copy(with zone: NSZone? = nil) -> AnyObject {
-        NSUnimplemented()
+        let copy = Calendar(calendarIdentifier: calendarIdentifier)!
+        copy.locale = locale
+        copy.timeZone = timeZone
+        copy.firstWeekday = firstWeekday
+        copy.minimumDaysInFirstWeek = minimumDaysInFirstWeek
+        copy._startDate = _startDate
+        return copy
     }
     
 
-    public class func currentCalendar() -> Calendar {
+    public class var current: Calendar {
         return CFCalendarCopyCurrent()._nsObject
     }
     

@@ -74,7 +74,10 @@ extension String {
   /// Return an `Index` corresponding to the given offset in our UTF-16
   /// representation.
   func _index(_ utf16Index: Int) -> Index {
-    return Index(_base: String.UnicodeScalarView.Index(utf16Index, _core))
+    return Index(
+      _base: String.UnicodeScalarView.Index(_position: utf16Index),
+      in: characters
+    )
   }
 
   /// Return a `Range<Index>` corresponding to the given `NSRange` of
@@ -160,7 +163,7 @@ extension String {
   public static func localizedStringWithFormat(
     _ format: String, _ arguments: CVarArg...
   ) -> String {
-    return String(format: format, locale: Locale.currentLocale(),
+    return String(format: format, locale: Locale.current,
       arguments: arguments)
   }
 
@@ -1473,7 +1476,7 @@ extension String {
   ///       locale: Locale.current()) != nil
   public func localizedCaseInsensitiveContains(_ other: String) -> Bool {
     let r = self.range(
-      of: other, options: .caseInsensitive, locale: Locale.currentLocale()
+      of: other, options: .caseInsensitive, locale: Locale.current
     ) != nil
     _sanityCheck(r == _ns.localizedCaseInsensitiveContains(other))
     return r

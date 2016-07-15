@@ -60,7 +60,8 @@ class TestNSURL : XCTestCase {
             // TODO: these tests fail on linux, more investigation is needed
             ("test_fileURLWithPath", test_fileURLWithPath),
             ("test_fileURLWithPath_isDirectory", test_fileURLWithPath_isDirectory),
-            ("test_URLByResolvingSymlinksInPath", test_URLByResolvingSymlinksInPath)
+            ("test_URLByResolvingSymlinksInPath", test_URLByResolvingSymlinksInPath),
+            ("test_copy", test_copy)
         ]
     }
     
@@ -149,9 +150,12 @@ class TestNSURL : XCTestCase {
             result["parameterString"] = url.parameterString ?? kNullString
             result["relativePath"] = url.relativePath ?? kNullString
             result["isFileURL"] = url.isFileURL ? "YES" : "NO"
-            // Not yet implemented
-            // result["standardizedURL"] = url.standardizedURL?.relativeString ?? kNullString
-            
+            do {
+                let url = try url.standardized()
+                result["standardizedURL"] = url.relativeString
+            } catch {
+                result["standardizedURL"] = kNullString
+            } 
             // Temporarily disabled because we're only checking string results
             // result["pathComponents"] = url.pathComponents ?? kNullString
             result["lastPathComponent"] = url.lastPathComponent ?? kNullString
@@ -222,14 +226,11 @@ class TestNSURL : XCTestCase {
             }
             if let url = url {
 
-                // TODO: NSURL.standardizedURL isn't implemented yet.
-                var modifiedExpectedNSResult = expectedNSResult as! [String: Any]
-                modifiedExpectedNSResult["standardizedURL"] = nil
                 if title == "NSURLWithString-parse-ambiguous-url-001" {
                     // TODO: Fix this test
                 } else {
                     let results = generateResults(url, pathComponent: inPathComponent, pathExtension: inPathExtension)
-                    let (isEqual, differences) = compareResults(url, expected: modifiedExpectedNSResult, got: results)
+                    let (isEqual, differences) = compareResults(url, expected: expectedNSResult as! [String: Any], got: results)
                     XCTAssertTrue(isEqual, "\(title): \(differences)")
                 }
             } else {
@@ -446,6 +447,16 @@ class TestNSURL : XCTestCase {
         } catch {
             XCTFail()
         }
+    }
+
+    func test_copy() {
+        let url = NSURL(string: "https://www.swift.org")
+        let urlCopy = url!.copy() as! NSURL
+        XCTAssertTrue(url!.isEqual(urlCopy))
+
+        let queryItem = NSURLQueryItem(name: "id", value: "23")
+        let queryItemCopy = queryItem.copy() as! NSURLQueryItem
+        XCTAssertTrue(queryItem.isEqual(queryItemCopy))
     }
 }
     
