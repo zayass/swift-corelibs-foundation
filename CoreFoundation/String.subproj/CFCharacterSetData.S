@@ -7,14 +7,16 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-    .global __CFCharacterSetBitmapData
-__CFCharacterSetBitmapData:
-    .incbin "CoreFoundation/CharacterSets/CFCharacterSetBitmaps.bitmap"
+#include <CoreFoundation/CFAsmMacros.h>
 
-    .global __CFCharacterSetBitmapDataEnd
-__CFCharacterSetBitmapDataEnd:
+    .global _C_LABEL(__CFCharacterSetBitmapData)
+_C_LABEL(__CFCharacterSetBitmapData):
+    .incbin CF_CHARACTERSET_BITMAP
+
+    .global _C_LABEL(__CFCharacterSetBitmapDataEnd)
+_C_LABEL(__CFCharacterSetBitmapDataEnd):
     .byte 0
 
-    .global __CFCharacterSetBitmapDataSize
-__CFCharacterSetBitmapDataSize:
-    .int __CFCharacterSetBitmapDataEnd - __CFCharacterSetBitmapData
+    .global _C_LABEL(__CFCharacterSetBitmapDataSize)
+_C_LABEL(__CFCharacterSetBitmapDataSize):
+    .int _C_LABEL(__CFCharacterSetBitmapDataEnd) - _C_LABEL(__CFCharacterSetBitmapData)

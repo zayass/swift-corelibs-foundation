@@ -45,7 +45,10 @@ extension TestNSJSONSerialization {
     }
     
     func test_JSONObjectWithData_emptyObject() {
-        let subject = Data(bytes: UnsafePointer<Void>([UInt8]([0x7B, 0x7D])), count: 2)
+        var bytes: [UInt8] = [0x7B, 0x7D]
+        let subject = bytes.withUnsafeMutableBufferPointer {
+            return Data(buffer: $0)
+        }
         
         let object = try! JSONSerialization.jsonObject(with: subject, options: []) as? [String:Any]
         XCTAssertEqual(object?.count, 0)
@@ -75,7 +78,7 @@ extension TestNSJSONSerialization {
         ]
         
         for (description, encoded) in subjects {
-            let result = try? JSONSerialization.jsonObject(with: Data(bytes:UnsafePointer<Void>(encoded), count: encoded.count), options: [])
+            let result = try? JSONSerialization.jsonObject(with: Data(bytes:encoded, count: encoded.count), options: [])
             XCTAssertNotNil(result, description)
         }
     }
@@ -114,6 +117,8 @@ extension TestNSJSONSerialization {
             ("test_deserialize_badlyFormedArray", test_deserialize_badlyFormedArray),
             ("test_deserialize_invalidEscapeSequence", test_deserialize_invalidEscapeSequence),
             ("test_deserialize_unicodeMissingTrailingSurrogate", test_deserialize_unicodeMissingTrailingSurrogate),
+            ("test_serialize_dictionaryWithDecimal", test_serialize_dictionaryWithDecimal),
+
         ]
     }
     
@@ -298,6 +303,8 @@ extension TestNSJSONSerialization {
                 return
             }
             let result = try JSONSerialization.jsonObject(with: data, options: []) as? [Any]
+            // result?[0] as? String returns an Optional<String> and RHS is promoted
+            // to Optional<String>
             XCTAssertEqual(result?[0] as? String, "✨")
         } catch {
             XCTFail("Unexpected error: \(error)")
@@ -312,6 +319,8 @@ extension TestNSJSONSerialization {
                 return
             }
             let result = try JSONSerialization.jsonObject(with: data, options: []) as? [Any]
+            // result?[0] as? String returns an Optional<String> and RHS is promoted
+            // to Optional<String>
             XCTAssertEqual(result?[0] as? String, "\u{1D11E}")
         } catch {
             XCTFail("Unexpected error: \(error)")
@@ -583,12 +592,15 @@ extension TestNSJSONSerialization {
             ("test_nested_dictionary", test_nested_dictionary),
             ("test_serialize_number", test_serialize_number),
             ("test_serialize_stringEscaping", test_serialize_stringEscaping),
-            ("test_serialize_invalid_json", test_serialize_invalid_json),
             ("test_jsonReadingOffTheEndOfBuffers", test_jsonReadingOffTheEndOfBuffers),
+            ("test_jsonObjectToOutputStreamBuffer", test_jsonObjectToOutputStreamBuffer),
+            ("test_jsonObjectToOutputStreamFile", test_jsonObjectToOutputStreamFile),
+            ("test_invalidJsonObjectToStreamBuffer", test_invalidJsonObjectToStreamBuffer),
+            ("test_jsonObjectToOutputStreamInsufficeintBuffer", test_jsonObjectToOutputStreamInsufficeintBuffer),
         ]
     }
 
-    func trySerialize(_ obj: AnyObject) throws -> String {
+    func trySerialize(_ obj: Any) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: obj, options: [])
         guard let string = String(data: data, encoding: .utf8) else {
             XCTFail("Unable to create string")
@@ -598,127 +610,212 @@ extension TestNSJSONSerialization {
     }
 
     func test_serialize_emptyObject() {
-        let dict1 = [String: Any]().bridge()
+        let dict1 = [String: Any]()
         XCTAssertEqual(try trySerialize(dict1), "{}")
             
-        let dict2 = [String: NSNumber]().bridge()
+        let dict2 = [String: NSNumber]()
         XCTAssertEqual(try trySerialize(dict2), "{}")
 
-        let dict3 = [String: String]().bridge()
+        let dict3 = [String: String]()
         XCTAssertEqual(try trySerialize(dict3), "{}")
 
-        let array1 = [String]().bridge()
+        let array1 = [String]()
         XCTAssertEqual(try trySerialize(array1), "[]")
 
-        let array2 = [NSNumber]().bridge()
+        let array2 = [NSNumber]()
         XCTAssertEqual(try trySerialize(array2), "[]")
     }
     
+    //[SR-2151] https://bugs.swift.org/browse/SR-2151
+    //NSJSONSerialization.data(withJSONObject:options) produces illegal JSON code
+    func test_serialize_dictionaryWithDecimal() {
+        
+        //test serialize values less than 1 with maxFractionDigits = 15
+        func excecute_testSetLessThanOne() {
+            //expected : input to be serialized
+            let params  = [
+                           ("0.1",0.1),
+                           ("0.2",0.2),
+                           ("0.3",0.3),
+                           ("0.4",0.4),
+                           ("0.5",0.5),
+                           ("0.6",0.6),
+                           ("0.7",0.7),
+                           ("0.8",0.8),
+                           ("0.9",0.9),
+                           ("0.23456789012345",0.23456789012345),
+
+                           ("-0.1",-0.1),
+                           ("-0.2",-0.2),
+                           ("-0.3",-0.3),
+                           ("-0.4",-0.4),
+                           ("-0.5",-0.5),
+                           ("-0.6",-0.6),
+                           ("-0.7",-0.7),
+                           ("-0.8",-0.8),
+                           ("-0.9",-0.9),
+                           ("-0.23456789012345",-0.23456789012345),
+                           ]
+            for param in params {
+                let testDict = [param.0 : param.1]
+                let str = try? trySerialize(testDict)
+                XCTAssertEqual(str!, "{\"\(param.0)\":\(param.1)}", "serialized value should  have a decimal places and leading zero")
+            }
+        }
+        //test serialize values grater than 1 with maxFractionDigits = 15
+        func excecute_testSetGraterThanOne() {
+            let paramsBove1 = [
+                ("1.1",1.1),
+                ("1.2",1.2),
+                ("1.23456789012345",1.23456789012345),
+                ("-1.1",-1.1),
+                ("-1.2",-1.2),
+                ("-1.23456789012345",-1.23456789012345),
+                ]
+            for param in paramsBove1 {
+                let testDict = [param.0 : param.1]
+                let str = try? trySerialize(testDict)
+                XCTAssertEqual(str!, "{\"\(param.0)\":\(param.1)}", "serialized Double should  have a decimal places and leading value")
+            }
+        }
+
+        //test serialize values for whole integer where the input is in Double format
+        func excecute_testWholeNumbersWithDoubleAsInput() {
+            
+            let paramsWholeNumbers = [
+                ("-1"  ,-1.0),
+                ("0"  ,0.0),
+                ("1"  ,1.0),
+                ]
+            for param in paramsWholeNumbers {
+                let testDict = [param.0 : param.1]
+                let str = try? trySerialize(testDict)
+                XCTAssertEqual(str!, "{\"\(param.0)\":\(NSString(string:param.0).intValue)}", "expect that serialized value should not contain trailing zero or decimal as they are whole numbers ")
+            }
+        }
+        
+        func excecute_testWholeNumbersWithIntInput() {
+            for i  in -10..<10 {
+                let iStr = "\(i)"
+                let testDict = [iStr : i]
+                let str = try? trySerialize(testDict)
+                XCTAssertEqual(str!, "{\"\(iStr)\":\(i)}", "expect that serialized value should not contain trailing zero or decimal as they are whole numbers ")
+            }
+        }
+        excecute_testSetLessThanOne()
+        excecute_testSetGraterThanOne()
+        excecute_testWholeNumbersWithDoubleAsInput()
+        excecute_testWholeNumbersWithIntInput()
+    }
+    
     func test_serialize_null() {
-        let arr = [NSNull()].bridge()
+        let arr = [NSNull()]
         XCTAssertEqual(try trySerialize(arr), "[null]")
         
-        let dict = ["a":NSNull()].bridge()
+        let dict = ["a":NSNull()]
         XCTAssertEqual(try trySerialize(dict), "{\"a\":null}")
         
-        let arr2 = [NSNull(), NSNull(), NSNull()].bridge()
+        let arr2 = [NSNull(), NSNull(), NSNull()]
         XCTAssertEqual(try trySerialize(arr2), "[null,null,null]")
         
-        let dict2 = [["a":NSNull()], ["b":NSNull()], ["c":NSNull()]].bridge()
+        let dict2 = [["a":NSNull()], ["b":NSNull()], ["c":NSNull()]]
         XCTAssertEqual(try trySerialize(dict2), "[{\"a\":null},{\"b\":null},{\"c\":null}]")
     }
 
     func test_serialize_complexObject() {
-        let jsonDict = ["a": 4].bridge()
+        let jsonDict = ["a": 4]
         XCTAssertEqual(try trySerialize(jsonDict), "{\"a\":4}")
 
-        let jsonArr = [1, 2, 3, 4].bridge()
+        let jsonArr = [1, 2, 3, 4]
         XCTAssertEqual(try trySerialize(jsonArr), "[1,2,3,4]")
 
-        let jsonDict2 = ["a": [1,2]].bridge()
+        let jsonDict2 = ["a": [1,2]]
         XCTAssertEqual(try trySerialize(jsonDict2), "{\"a\":[1,2]}")
 
-        let jsonArr2 = ["a", "b", "c"].bridge()
+        let jsonArr2 = ["a", "b", "c"]
         XCTAssertEqual(try trySerialize(jsonArr2), "[\"a\",\"b\",\"c\"]")
         
-        let jsonArr3 = [["a":1],["b":2]].bridge()
+        let jsonArr3 = [["a":1],["b":2]]
         XCTAssertEqual(try trySerialize(jsonArr3), "[{\"a\":1},{\"b\":2}]")
         
-        let jsonArr4 = [["a":NSNull()],["b":NSNull()]].bridge()
+        let jsonArr4 = [["a":NSNull()],["b":NSNull()]]
         XCTAssertEqual(try trySerialize(jsonArr4), "[{\"a\":null},{\"b\":null}]")
     }
     
     func test_nested_array() {
-        var arr = ["a"].bridge()
+        var arr: [Any] = ["a"]
         XCTAssertEqual(try trySerialize(arr), "[\"a\"]")
         
-        arr = [["b"]].bridge()
+        arr = [["b"]]
         XCTAssertEqual(try trySerialize(arr), "[[\"b\"]]")
         
-        arr = [[["c"]]].bridge()
+        arr = [[["c"]]]
         XCTAssertEqual(try trySerialize(arr), "[[[\"c\"]]]")
         
-        arr = [[[["d"]]]].bridge()
+        arr = [[[["d"]]]]
         XCTAssertEqual(try trySerialize(arr), "[[[[\"d\"]]]]")
     }
     
     func test_nested_dictionary() {
-        var dict = ["a":1].bridge()
+        var dict: [AnyHashable : Any] = ["a":1]
         XCTAssertEqual(try trySerialize(dict), "{\"a\":1}")
         
-        dict = ["a":["b":1]].bridge()
+        dict = ["a":["b":1]]
         XCTAssertEqual(try trySerialize(dict), "{\"a\":{\"b\":1}}")
         
-        dict = ["a":["b":["c":1]]].bridge()
+        dict = ["a":["b":["c":1]]]
         XCTAssertEqual(try trySerialize(dict), "{\"a\":{\"b\":{\"c\":1}}}")
         
-        dict = ["a":["b":["c":["d":1]]]].bridge()
+        dict = ["a":["b":["c":["d":1]]]]
         XCTAssertEqual(try trySerialize(dict), "{\"a\":{\"b\":{\"c\":{\"d\":1}}}}")
     }
     
     func test_serialize_number() {
-        var json = [1, 1.1, 0, -2].bridge()
+        var json: [Any] = [1, 1.1, 0, -2]
         XCTAssertEqual(try trySerialize(json), "[1,1.1,0,-2]")
         
         // Cannot generate "true"/"false" currently
-        json = [NSNumber(value:false),NSNumber(value:true)].bridge()
+        json = [NSNumber(value:false),NSNumber(value:true)]
         XCTAssertEqual(try trySerialize(json), "[0,1]")
     }
     
     func test_serialize_stringEscaping() {
-        var json = ["foo"].bridge()
+        var json = ["foo"]
         XCTAssertEqual(try trySerialize(json), "[\"foo\"]")
 
-        json = ["a\0"].bridge()
+        json = ["a\0"]
         XCTAssertEqual(try trySerialize(json), "[\"a\\u0000\"]")
             
-        json = ["b\\"].bridge()
+        json = ["b\\"]
         XCTAssertEqual(try trySerialize(json), "[\"b\\\\\"]")
         
-        json = ["c\t"].bridge()
+        json = ["c\t"]
         XCTAssertEqual(try trySerialize(json), "[\"c\\t\"]")
         
-        json = ["d\n"].bridge()
+        json = ["d\n"]
         XCTAssertEqual(try trySerialize(json), "[\"d\\n\"]")
         
-        json = ["e\r"].bridge()
+        json = ["e\r"]
         XCTAssertEqual(try trySerialize(json), "[\"e\\r\"]")
         
-        json = ["f\""].bridge()
+        json = ["f\""]
         XCTAssertEqual(try trySerialize(json), "[\"f\\\"\"]")
         
-        json = ["g\'"].bridge()
+        json = ["g\'"]
         XCTAssertEqual(try trySerialize(json), "[\"g\'\"]")
         
-        json = ["h\u{7}"].bridge()
+        json = ["h\u{7}"]
         XCTAssertEqual(try trySerialize(json), "[\"h\\u0007\"]")
         
-        json = ["i\u{1f}"].bridge()
+        json = ["i\u{1f}"]
         XCTAssertEqual(try trySerialize(json), "[\"i\\u001f\"]")
     }
 
+    /* These are a programming error and should not be done
+       Ideally the interface for JSONSerialization should at compile time prevent this type of thing
+       by overloading the interface such that it can only accept dictionaries and arrays.
     func test_serialize_invalid_json() {
-        let str = "Invalid JSON".bridge()
+        let str = "Invalid JSON"
         do {
             let _ = try trySerialize(str)
             XCTFail("Top-level JSON object cannot be string")
@@ -734,7 +831,7 @@ extension TestNSJSONSerialization {
             // should get here
         }
         
-        let dict = [NSNumber(value: Double(1.2)):"a"].bridge()
+        let dict = [NSNumber(value: Double(1.2)):"a"]
         do {
             let _ = try trySerialize(dict)
             XCTFail("Dictionary keys must be strings")
@@ -742,12 +839,13 @@ extension TestNSJSONSerialization {
             // should get here
         }
     }
+ */
     
     func test_jsonReadingOffTheEndOfBuffers() {
         let data = "12345679".data(using: .utf8)!
         do {
             let res = try data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Any in
-                let slice = Data(bytesNoCopy: UnsafeMutablePointer<UInt8>(bytes), count: 1, deallocator: .none)
+                let slice = Data(bytesNoCopy: UnsafeMutablePointer(mutating: bytes), count: 1, deallocator: .none)
                 return try JSONSerialization.jsonObject(with: slice, options: .allowFragments)
             }
             if let num = res as? Int {
@@ -757,6 +855,99 @@ extension TestNSJSONSerialization {
             }
         } catch {
             XCTFail("Unknow json decoding failure")
+        }
+    }
+    
+    func test_jsonObjectToOutputStreamBuffer(){
+        let dict = ["a":["b":1]]
+        do {
+            let buffer = Array<UInt8>(repeating: 0, count: 20)
+            let outputStream = OutputStream(toBuffer: UnsafeMutablePointer(mutating: buffer), capacity: 20)
+            outputStream.open()
+            let result = try JSONSerialization.writeJSONObject(dict, toStream: outputStream, options: [])
+            outputStream.close()
+            if(result > -1) {
+                XCTAssertEqual(NSString(bytes: buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue), "{\"a\":{\"b\":1}}")
+            }
+        } catch {
+            XCTFail("Error thrown: \(error)")
+        }
+    }
+    
+    func test_jsonObjectToOutputStreamFile() {
+        let dict = ["a":["b":1]]
+        do {
+            let filePath = createTestFile("TestFileOut.txt",_contents: Data(capacity: 128))
+            if filePath != nil {
+                let outputStream = OutputStream(toFileAtPath: filePath!, append: true)
+                outputStream?.open()
+                let result = try JSONSerialization.writeJSONObject(dict, toStream: outputStream!, options: [])
+                outputStream?.close()
+                if(result > -1) {
+                    let fileStream: InputStream = InputStream(fileAtPath: filePath!)!
+                    var buffer = [UInt8](repeating: 0, count: 20)
+                    fileStream.open()
+                    if fileStream.hasBytesAvailable {
+                        let resultRead: Int = fileStream.read(&buffer, maxLength: buffer.count)
+                        fileStream.close()
+                        if(resultRead > -1){
+                            XCTAssertEqual(NSString(bytes: buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue), "{\"a\":{\"b\":1}}")
+                        }
+                    }
+                    removeTestFile(filePath!)
+                } else {
+                    XCTFail("Unable to create temp file")
+                }
+            }
+        } catch {
+            XCTFail("Error thrown: \(error)")
+        }
+    }
+    
+    func test_jsonObjectToOutputStreamInsufficeintBuffer() {
+        let dict = ["a":["b":1]]
+        let buffer = Array<UInt8>(repeating: 0, count: 10)
+        let outputStream = OutputStream(toBuffer: UnsafeMutablePointer(mutating: buffer), capacity: buffer.count)
+        outputStream.open()
+        do {
+            let result = try JSONSerialization.writeJSONObject(dict, toStream: outputStream, options: [])
+            outputStream.close()
+            if(result > -1) {
+                XCTAssertNotEqual(NSString(bytes: buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue), "{\"a\":{\"b\":1}}")
+            }
+        } catch {
+            XCTFail("Error occurred while writing to stream")
+        }
+    }
+    
+    func test_invalidJsonObjectToStreamBuffer() {
+        let str = "Invalid JSON"
+        let buffer = Array<UInt8>(repeating: 0, count: 10)
+        let outputStream = OutputStream(toBuffer: UnsafeMutablePointer(mutating: buffer), capacity: buffer.count)
+        outputStream.open()
+        XCTAssertThrowsError(try JSONSerialization.writeJSONObject(str, toStream: outputStream, options: []))
+    }
+    
+    private func createTestFile(_ path: String,_contents: Data) -> String? {
+        let tempDir = "/tmp/TestFoundation_Playground_" + NSUUID().uuidString + "/"
+        do {
+            try FileManager.default.createDirectory(atPath: tempDir, withIntermediateDirectories: false, attributes: nil)
+            if FileManager.default.createFile(atPath: tempDir + "/" + path, contents: _contents,
+                                                attributes: nil) {
+                return tempDir + path
+            } else {
+                return nil
+            }
+        } catch _ {
+            return nil
+        }
+    }
+    
+    private func removeTestFile(_ location: String) {
+        do {
+            try FileManager.default.removeItem(atPath: location)
+        } catch _ {
+            
         }
     }
 }

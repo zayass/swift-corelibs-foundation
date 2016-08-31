@@ -125,9 +125,9 @@ class TestNSStream : XCTestCase {
     }
     
     func test_outputStreamCreationToFile() {
-        let filePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 256)!)
+        let filePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 256))
         if filePath != nil {
-            let outputStream = NSOutputStream(toFileAtPath: filePath!, append: true)
+            let outputStream = OutputStream(toFileAtPath: filePath!, append: true)
             XCTAssertEqual(Stream.Status.notOpen, outputStream!.streamStatus)
             var myString = "Hello world!"
             let encodedData = [UInt8](myString.utf8)
@@ -147,7 +147,7 @@ class TestNSStream : XCTestCase {
         var buffer = Array<UInt8>(repeating: 0, count: 12)
         var myString = "Hello world!"
         let encodedData = [UInt8](myString.utf8)
-        let outputStream = NSOutputStream(toBuffer: UnsafeMutablePointer<UInt8>(buffer), capacity: 12)
+        let outputStream = OutputStream(toBuffer: UnsafeMutablePointer(mutating: buffer), capacity: 12)
         XCTAssertEqual(Stream.Status.notOpen, outputStream.streamStatus)
         outputStream.open()
         XCTAssertEqual(Stream.Status.open, outputStream.streamStatus)
@@ -155,13 +155,13 @@ class TestNSStream : XCTestCase {
         outputStream.close()
         XCTAssertEqual(Stream.Status.closed, outputStream.streamStatus)
         XCTAssertEqual(myString.characters.count, result)
-        XCTAssertEqual(NSString(bytes: &buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue),myString._bridgeToObject())
+        XCTAssertEqual(NSString(bytes: &buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue), NSString(string: myString))
     }
     
     func test_outputStreamCreationWithUrl() {
-        let filePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 256)!)
+        let filePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 256))
         if filePath != nil {
-            let outputStream = NSOutputStream(url: URL(fileURLWithPath: filePath!), append: true)
+            let outputStream = OutputStream(url: URL(fileURLWithPath: filePath!), append: true)
             XCTAssertEqual(Stream.Status.notOpen, outputStream!.streamStatus)
             var myString = "Hello world!"
             let encodedData = [UInt8](myString.utf8)
@@ -181,17 +181,17 @@ class TestNSStream : XCTestCase {
         var buffer = Array<UInt8>(repeating: 0, count: 12)
         var myString = "Hello world!"
         let encodedData = [UInt8](myString.utf8)
-        let outputStream = NSOutputStream.outputStreamToMemory()
+        let outputStream = OutputStream.outputStreamToMemory()
         XCTAssertEqual(Stream.Status.notOpen, outputStream.streamStatus)
         outputStream.open()
         XCTAssertEqual(Stream.Status.open, outputStream.streamStatus)
         let result: Int? = outputStream.write(encodedData, maxLength: encodedData.count)
         XCTAssertEqual(myString.characters.count, result)
         //verify the data written
-        let dataWritten  = outputStream.propertyForKey(NSStreamDataWrittenToMemoryStreamKey)
+        let dataWritten  = outputStream.property(forKey: Stream.PropertyKey.dataWrittenToMemoryStreamKey)
         if let nsdataWritten = dataWritten as? NSData {
-            nsdataWritten.getBytes(UnsafeMutablePointer<UInt8>(buffer), length: result!)
-            XCTAssertEqual(NSString(bytes: &buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue), myString._bridgeToObject())
+            nsdataWritten.getBytes(UnsafeMutablePointer(mutating: buffer), length: result!)
+            XCTAssertEqual(NSString(bytes: &buffer, length: buffer.count, encoding: String.Encoding.utf8.rawValue), NSString(string: myString))
             outputStream.close()
         } else {
             XCTFail("Unable to get data from memeory.")
@@ -202,7 +202,7 @@ class TestNSStream : XCTestCase {
         let buffer = Array<UInt8>(repeating: 0, count: 12)
         var myString = "Welcome To Hello world  !"
         let encodedData = [UInt8](myString.utf8)
-        let outputStream = NSOutputStream(toBuffer: UnsafeMutablePointer<UInt8>(buffer), capacity: 12)
+        let outputStream = OutputStream(toBuffer: UnsafeMutablePointer(mutating: buffer), capacity: 12)
         outputStream.open()
         XCTAssertTrue(outputStream.hasSpaceAvailable)
         _ = outputStream.write(encodedData, maxLength: encodedData.count)
@@ -210,17 +210,17 @@ class TestNSStream : XCTestCase {
     }
     
     func test_ouputStreamWithInvalidPath(){
-        let outputStream = NSOutputStream(toFileAtPath: "http:///home/sdsfsdfd", append: true)
+        let outputStream = OutputStream(toFileAtPath: "http:///home/sdsfsdfd", append: true)
         XCTAssertEqual(Stream.Status.notOpen, outputStream!.streamStatus)
         outputStream?.open()
         XCTAssertEqual(Stream.Status.error, outputStream!.streamStatus)
     }
     
     private func createTestFile(_ path: String, _contents: Data) -> String? {
-        let tempDir = "/tmp/TestFoundation_Playground_" + NSUUID().UUIDString + "/"
+        let tempDir = "/tmp/TestFoundation_Playground_" + NSUUID().uuidString + "/"
         do {
-            try FileManager.default().createDirectory(atPath: tempDir, withIntermediateDirectories: false, attributes: nil)
-            if FileManager.default().createFile(atPath: tempDir + "/" + path, contents: _contents,
+            try FileManager.default.createDirectory(atPath: tempDir, withIntermediateDirectories: false, attributes: nil)
+            if FileManager.default.createFile(atPath: tempDir + "/" + path, contents: _contents,
                                                 attributes: nil) {
                 return tempDir + path
             } else {
@@ -233,7 +233,7 @@ class TestNSStream : XCTestCase {
     
     private func removeTestFile(_ location: String) {
         do {
-            try FileManager.default().removeItem(atPath: location)
+            try FileManager.default.removeItem(atPath: location)
         } catch _ {
             
         }

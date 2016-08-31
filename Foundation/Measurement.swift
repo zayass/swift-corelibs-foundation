@@ -54,7 +54,7 @@ extension Measurement where UnitType : Dimension {
             return Measurement(value: value, unit: otherUnit)
         } else {
             let valueInTermsOfBase = unit.converter.baseUnitValue(fromValue: value)
-            if otherUnit.isEqual(unit.dynamicType.baseUnit()) {
+            if otherUnit.isEqual(type(of: unit).baseUnit()) {
                 return Measurement(value: valueInTermsOfBase, unit: otherUnit)
             } else {
                 let otherValueFromTermsOfBase = otherUnit.converter.value(fromBaseUnitValue: valueInTermsOfBase)
@@ -93,7 +93,7 @@ public func +<UnitType : Dimension>(lhs: Measurement<UnitType>, rhs: Measurement
     } else {
         let lhsValueInTermsOfBase = lhs.unit.converter.baseUnitValue(fromValue: lhs.value)
         let rhsValueInTermsOfBase = rhs.unit.converter.baseUnitValue(fromValue: rhs.value)
-        return Measurement(value: lhsValueInTermsOfBase + rhsValueInTermsOfBase, unit: lhs.unit.dynamicType.baseUnit())
+        return Measurement(value: lhsValueInTermsOfBase + rhsValueInTermsOfBase, unit: type(of: lhs.unit).baseUnit())
     }
 }
 
@@ -118,7 +118,7 @@ public func -<UnitType : Dimension>(lhs: Measurement<UnitType>, rhs: Measurement
     } else {
         let lhsValueInTermsOfBase = lhs.unit.converter.baseUnitValue(fromValue: lhs.value)
         let rhsValueInTermsOfBase = rhs.unit.converter.baseUnitValue(fromValue: rhs.value)
-        return Measurement(value: lhsValueInTermsOfBase - rhsValueInTermsOfBase, unit: lhs.unit.dynamicType.baseUnit())
+        return Measurement(value: lhsValueInTermsOfBase - rhsValueInTermsOfBase, unit: type(of: lhs.unit).baseUnit())
     }
 }
 
@@ -247,7 +247,7 @@ public func >=<UnitType : Dimension>(lhs: Measurement<UnitType>, rhs: Measuremen
 
 // Implementation note: similar to NSArray, NSDictionary, etc., NSMeasurement's import as an ObjC generic type is suppressed by the importer. Eventually we will need a more general purpose mechanism to correctly import generic types.
 
-extension Measurement {
+extension Measurement : _ObjectTypeBridgeable {
     public static func _isBridgedToObjectiveC() -> Bool {
         return true
     }

@@ -17,12 +17,12 @@ public struct DateInterval : ReferenceConvertible, Comparable, Hashable {
     public typealias ReferenceType = NSDateInterval
     
     /// The start date.
-    public var start : Date
+    public var start: Date
     
     /// The end date.
     ///
     /// - precondition: `end >= start`
-    public var end : Date {
+    public var end: Date {
         get {
             return start + duration
         }
@@ -35,7 +35,7 @@ public struct DateInterval : ReferenceConvertible, Comparable, Hashable {
     /// The duration.
     ///
     /// - precondition: `duration >= 0`
-    public var duration : TimeInterval {
+    public var duration: TimeInterval {
         willSet {
             precondition(newValue >= 0, "Negative durations are not allowed")
         }
@@ -155,11 +155,21 @@ public struct DateInterval : ReferenceConvertible, Comparable, Hashable {
     
     public var hashValue: Int {
         var buf: (UInt, UInt) = (UInt(start.timeIntervalSinceReferenceDate), UInt(end.timeIntervalSinceReferenceDate))
-        return withUnsafeMutablePointer(&buf) {
-            return Int(bitPattern: CFHashBytes(unsafeBitCast($0, to: UnsafeMutablePointer<UInt8>.self), CFIndex(sizeof(UInt.self) * 2)))
+        return withUnsafeMutablePointer(to: &buf) {
+            return Int(bitPattern: CFHashBytes(unsafeBitCast($0, to: UnsafeMutablePointer<UInt8>.self), CFIndex(MemoryLayout<UInt>.size * 2)))
         }
     }
     
+    public static func ==(lhs: DateInterval, rhs: DateInterval) -> Bool {
+        return lhs.start == rhs.start && lhs.duration == rhs.duration
+    }
+    
+    public static func <(lhs: DateInterval, rhs: DateInterval) -> Bool {
+        return lhs.compare(rhs) == .orderedAscending
+    }
+}
+
+extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var description: String {
         return "(Start Date) \(start) + (Duration) \(duration) seconds = (End Date) \(end)"
     }
@@ -167,17 +177,17 @@ public struct DateInterval : ReferenceConvertible, Comparable, Hashable {
     public var debugDescription: String {
         return description
     }
+    
+    public var customMirror: Mirror {
+        var c: [(label: String?, value: Any)] = []
+        c.append((label: "start", value: start))
+        c.append((label: "end", value: end))
+        c.append((label: "duration", value: duration))
+        return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
+    }
 }
 
-public func ==(lhs: DateInterval, rhs: DateInterval) -> Bool {
-    return lhs.start == rhs.start && lhs.duration == rhs.duration
-}
-
-public func <(lhs: DateInterval, rhs: DateInterval) -> Bool {
-    return lhs.compare(rhs) == .orderedAscending
-}
-
-extension DateInterval {
+extension DateInterval : _ObjectTypeBridgeable {
     public static func _isBridgedToObjectiveC() -> Bool {
         return true
     }

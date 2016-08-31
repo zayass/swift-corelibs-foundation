@@ -68,12 +68,12 @@ internal class NSConcreteValue : NSValue {
     }
     
     private static var _cachedTypeInfo = Dictionary<String, TypeInfo>()
-    private static var _cachedTypeInfoLock = Lock()
+    private static var _cachedTypeInfoLock = NSLock()
     
     private var _typeInfo : TypeInfo
-    private var _storage : UnsafeMutablePointer<UInt8>
+    private var _storage : UnsafeMutableRawPointer
       
-    required init(bytes value: UnsafePointer<Void>, objCType type: UnsafePointer<Int8>) {
+    required init(bytes value: UnsafeRawPointer, objCType type: UnsafePointer<Int8>) {
         let spec = String(cString: type)
         var typeInfo : TypeInfo? = nil
 
@@ -91,17 +91,17 @@ internal class NSConcreteValue : NSValue {
 
         self._typeInfo = typeInfo!
 
-        self._storage = UnsafeMutablePointer<UInt8>(allocatingCapacity: self._typeInfo.size)
-        self._storage.initializeFrom(unsafeBitCast(value, to: UnsafeMutablePointer<UInt8>.self), count: self._typeInfo.size)
+        self._storage = UnsafeMutableRawPointer.allocate(bytes: self._typeInfo.size, alignedTo: 1)
+        self._storage.copyBytes(from: value, count: self._typeInfo.size)
     }
 
     deinit {
-        self._storage.deinitialize(count: self._size)
-        self._storage.deallocateCapacity(self._size)
+        // Cannot deinitialize raw memory.
+        self._storage.deallocate(bytes: self._size, alignedTo: 1)
     }
     
-    override func getValue(_ value: UnsafeMutablePointer<Void>) {
-        UnsafeMutablePointer<UInt8>(value).moveInitializeFrom(unsafeBitCast(self._storage, to: UnsafeMutablePointer<UInt8>.self), count: self._size)
+    override func getValue(_ value: UnsafeMutableRawPointer) {
+        value.copyBytes(from: self._storage, count: self._size)
     }
     
     override var objCType : UnsafePointer<Int8> {
@@ -113,7 +113,8 @@ internal class NSConcreteValue : NSValue {
     }
     
     override var description : String {
-        return Data(bytes: self.value, count: self._size).description
+        let boundBytes = self.value.bindMemory(to: UInt8.self, capacity: self._size)
+        return Data(bytes: boundBytes, count: self._size).description
     }
     
     convenience required init?(coder aDecoder: NSCoder) {
@@ -136,7 +137,7 @@ internal class NSConcreteValue : NSValue {
         if !aCoder.allowsKeyedCoding {
             NSUnimplemented()
         } else {
-            aCoder.encode(String(cString: self.objCType).bridge())
+            aCoder.encode(String(cString: self.objCType)._bridgeToObjectiveC())
             aCoder.encodeValue(ofObjCType: self.objCType, at: self.value)
         }
     }
@@ -145,8 +146,8 @@ internal class NSConcreteValue : NSValue {
         return self._typeInfo.size
     }
     
-    private var value : UnsafeMutablePointer<Void> {
-        return unsafeBitCast(self._storage, to: UnsafeMutablePointer<Void>.self)
+    private var value : UnsafeMutableRawPointer {
+        return self._storage
     }
     
     private func _isEqualToValue(_ other: NSConcreteValue) -> Bool {
@@ -167,8 +168,8 @@ internal class NSConcreteValue : NSValue {
         return memcmp(bytes1, bytes2, self._size) == 0
     }
     
-    override func isEqual(_ object: AnyObject?) -> Bool {
-        if let other = object as? NSConcreteValue {
+    override func isEqual(_ value: Any?) -> Bool {
+        if let other = value as? NSConcreteValue {
             return self._typeInfo == other._typeInfo &&
                    self._isEqualToValue(other)
         } else {

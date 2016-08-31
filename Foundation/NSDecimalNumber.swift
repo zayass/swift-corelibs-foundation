@@ -9,26 +9,75 @@
 
 
 /***************	Exceptions		***********/
-public let NSDecimalNumberExactnessException: String = "NSDecimalNumberExactnessException"
-public let NSDecimalNumberOverflowException: String = "NSDecimalNumberOverflowException"
-public let NSDecimalNumberUnderflowException: String = "NSDecimalNumberUnderflowException"
-public let NSDecimalNumberDivideByZeroException: String = "NSDecimalNumberDivideByZeroException"
+public struct NSExceptionName : RawRepresentable, Equatable, Hashable, Comparable {
+    public private(set) var rawValue: String
+    
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
+    
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+    
+    public var hashValue: Int {
+        return self.rawValue.hashValue
+    }
+    
+    public static func ==(_ lhs: NSExceptionName, _ rhs: NSExceptionName) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
+    
+    public static func <(_ lhs: NSExceptionName, _ rhs: NSExceptionName) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+
+extension NSExceptionName {
+    public static let decimalNumberExactnessException = NSExceptionName(rawValue: "NSDecimalNumberExactnessException")
+    public static let decimalNumberOverflowException = NSExceptionName(rawValue: "NSDecimalNumberOverflowException")
+    public static let decimalNumberUnderflowException = NSExceptionName(rawValue: "NSDecimalNumberUnderflowException")
+    public static let decimalNumberDivideByZeroException = NSExceptionName(rawValue: "NSDecimalNumberDivideByZeroException")
+}
 
 /***************	Rounding and Exception behavior		***********/
 
+// Rounding policies :
+// Original
+//    value 1.2  1.21  1.25  1.35  1.27
+// Plain    1.2  1.2   1.3   1.4   1.3
+// Down     1.2  1.2   1.2   1.3   1.2
+// Up       1.2  1.3   1.3   1.4   1.3
+// Bankers  1.2  1.2   1.2   1.4   1.3
+
+/***************	Type definitions		***********/
+extension NSDecimalNumber {
+    public enum RoundingMode : UInt {
+        case plain // Round up on a tie
+        case down // Always down == truncate
+        case up // Always up
+        case bankers // on a tie round so last digit is even
+    }
+    
+    public enum CalculationError : UInt {
+        case noError
+        case lossOfPrecision // Result lost precision
+        case underflow // Result became 0
+        case overflow // Result exceeds possible representation
+        case divideByZero
+    }
+}
+
 public protocol NSDecimalNumberBehaviors {
-    
-    func roundingMode() -> Decimal.RoundingMode
-    
+    func roundingMode() -> NSDecimalNumber.RoundingMode
     func scale() -> Int16
-    // The scale could return NO_SCALE for no defined scale.
 }
 
 // Receiver can raise, return a new value, or return nil to ignore the exception.
 
 
 /***************	NSDecimalNumber: the class		***********/
-public class NSDecimalNumber : NSNumber {
+open class NSDecimalNumber : NSNumber {
     
     public convenience init(mantissa: UInt64, exponent: Int16, isNegative flag: Bool) { NSUnimplemented() }
     public init(decimal dcm: Decimal) { NSUnimplemented() }
@@ -51,86 +100,84 @@ public class NSDecimalNumber : NSNumber {
         NSUnimplemented()
     }
     
-    public required convenience init(bytes buffer: UnsafePointer<Void>, objCType type: UnsafePointer<Int8>) {
+    public required convenience init(bytes buffer: UnsafeRawPointer, objCType type: UnsafePointer<Int8>) {
         NSRequiresConcreteImplementation()
     }
     
-    public override func description(withLocale locale: AnyObject?) -> String { NSUnimplemented() }
+    open override func description(withLocale locale: Locale?) -> String { NSUnimplemented() }
     
     // TODO: "declarations from extensions cannot be overridden yet"
     // Although it's not clear we actually need to redeclare this here when the extension adds it to the superclass of this class
-    // public var decimalValue: NSDecimal { NSUnimplemented() }
+    // open var decimalValue: Decimal { NSUnimplemented() }
     
-    public class func zero() -> NSDecimalNumber { NSUnimplemented() }
-    public class func one() -> NSDecimalNumber { NSUnimplemented() }
-    public class func minimum() -> NSDecimalNumber { NSUnimplemented() }
-    public class func maximum() -> NSDecimalNumber { NSUnimplemented() }
-    public class func notANumber() -> NSDecimalNumber { NSUnimplemented() }
+    open class var zero: NSDecimalNumber { NSUnimplemented() }
+    open class var one: NSDecimalNumber { NSUnimplemented() }
+    open class var minimum: NSDecimalNumber { NSUnimplemented() }
+    open class var maximum: NSDecimalNumber { NSUnimplemented() }
+    open class var notANumber: NSDecimalNumber { NSUnimplemented() }
     
-    public func adding(_ decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
-    public func adding(_ decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func adding(_ decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
+    open func adding(_ decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     
-    public func subtracting(_ decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
-    public func subtracting(_ decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func subtracting(_ decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
+    open func subtracting(_ decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     
-    public func multiplying(by decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
-    public func multiplying(by decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func multiplying(by decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
+    open func multiplying(by decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     
-    public func dividing(by decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
-    public func dividing(by decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func dividing(by decimalNumber: NSDecimalNumber) -> NSDecimalNumber { NSUnimplemented() }
+    open func dividing(by decimalNumber: NSDecimalNumber, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     
-    public func raising(toPower power: Int) -> NSDecimalNumber { NSUnimplemented() }
-    public func raising(toPower power: Int, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func raising(toPower power: Int) -> NSDecimalNumber { NSUnimplemented() }
+    open func raising(toPower power: Int, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     
-    public func multiplying(byPowerOf10 power: Int16) -> NSDecimalNumber { NSUnimplemented() }
-    public func multiplying(byPowerOf10 power: Int16, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func multiplying(byPowerOf10 power: Int16) -> NSDecimalNumber { NSUnimplemented() }
+    open func multiplying(byPowerOf10 power: Int16, withBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     
-    public func rounding(accordingToBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
+    open func rounding(accordingToBehavior behavior: NSDecimalNumberBehaviors?) -> NSDecimalNumber { NSUnimplemented() }
     // Round to the scale of the behavior.
     
-    public override func compare(_ decimalNumber: NSNumber) -> ComparisonResult { NSUnimplemented() }
+    open override func compare(_ decimalNumber: NSNumber) -> ComparisonResult { NSUnimplemented() }
     // compare two NSDecimalNumbers
     
-    public class func setDefaultBehavior(_ behavior: NSDecimalNumberBehaviors) { NSUnimplemented() }
-    
-    public class func defaultBehavior() -> NSDecimalNumberBehaviors { NSUnimplemented() }
+    open class var defaultBehavior: NSDecimalNumberBehaviors { NSUnimplemented() }
     // One behavior per thread - The default behavior is
     //   rounding mode: NSRoundPlain
     //   scale: No defined scale (full precision)
     //   ignore exactnessException
     //   raise on overflow, underflow and divide by zero.
     
-    public override var objCType: UnsafePointer<Int8> { NSUnimplemented() }
+    open override var objCType: UnsafePointer<Int8> { NSUnimplemented() }
     // return 'd' for double
     
-    public override var doubleValue: Double { NSUnimplemented() }
+    open override var doubleValue: Double { NSUnimplemented() }
 }
 
 // return an approximate double value
 
 
 /***********	A class for defining common behaviors		*******/
-public class NSDecimalNumberHandler : NSObject, NSDecimalNumberBehaviors, NSCoding {
+open class NSDecimalNumberHandler : NSObject, NSDecimalNumberBehaviors, NSCoding {
     
     public required init?(coder aDecoder: NSCoder) {
         NSUnimplemented()
     }
     
-    public func encode(with aCoder: NSCoder) {
+    open func encode(with aCoder: NSCoder) {
         NSUnimplemented()
     }
     
-    public class func defaultDecimalNumberHandler() -> NSDecimalNumberHandler{ NSUnimplemented() }
+    open class func `default`() -> NSDecimalNumberHandler { NSUnimplemented() }
     // rounding mode: NSRoundPlain
     // scale: No defined scale (full precision)
     // ignore exactnessException (return nil)
     // raise on overflow, underflow and divide by zero.
     
-    public init(roundingMode: Decimal.RoundingMode, scale: Int16, raiseOnExactness exact: Bool, raiseOnOverflow overflow: Bool, raiseOnUnderflow underflow: Bool, raiseOnDivideByZero divideByZero: Bool) { NSUnimplemented() }
+    public init(roundingMode: NSDecimalNumber.RoundingMode, scale: Int16, raiseOnExactness exact: Bool, raiseOnOverflow overflow: Bool, raiseOnUnderflow underflow: Bool, raiseOnDivideByZero divideByZero: Bool) { NSUnimplemented() }
     
-    public func roundingMode() -> Decimal.RoundingMode { NSUnimplemented() }
+    open func roundingMode() -> NSDecimalNumber.RoundingMode { NSUnimplemented() }
     
-    public func scale() -> Int16 { NSUnimplemented() }
+    open func scale() -> Int16 { NSUnimplemented() }
     // The scale could return NO_SCALE for no defined scale.
 }
 

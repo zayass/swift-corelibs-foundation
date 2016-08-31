@@ -16,9 +16,9 @@
 /// the actual bytes representing the content of a URL. See
 /// `NSURLSession` for more information about receiving the content
 /// data for a URL load.
-public class URLResponse : NSObject, NSSecureCoding, NSCopying {
+open class URLResponse : NSObject, NSSecureCoding, NSCopying {
 
-    static public func supportsSecureCoding() -> Bool {
+    static public var supportsSecureCoding: Bool {
         return true
     }
     
@@ -26,15 +26,15 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
         NSUnimplemented()
     }
     
-    public func encode(with aCoder: NSCoder) {
+    open func encode(with aCoder: NSCoder) {
         NSUnimplemented()
     }
     
-    public override func copy() -> AnyObject {
+    open override func copy() -> Any {
         return copy(with: nil)
     }
     
-    public func copy(with zone: NSZone? = nil) -> AnyObject {
+    open func copy(with zone: NSZone? = nil) -> Any {
         return self
     }
     
@@ -52,11 +52,11 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
         self.expectedContentLength = Int64(length)
         self.textEncodingName = name
         let c = url.lastPathComponent
-        self.suggestedFilename = (c?.isEmpty ?? true) ? "Unknown" : c
+        self.suggestedFilename = c.isEmpty ? "Unknown" : c
     }
     
     /// The URL of the receiver.
-    /*@NSCopying*/ public private(set) var url: URL?
+    /*@NSCopying*/ open private(set) var url: URL?
 
     
     /// The MIME type of the receiver.
@@ -67,7 +67,7 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
     /// that the origin server or source reported the information
     /// incorrectly or imprecisely. An attempt to guess the MIME type may
     /// be made if the origin source did not report any such information.
-    public private(set) var mimeType: String?
+    open fileprivate(set) var mimeType: String?
     
     /// The expected content length of the receiver.
     ///
@@ -81,7 +81,7 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
     /// The expected content length of the receiver, or `-1` if
     /// there is no expectation that can be arrived at regarding expected
     /// content length.
-    public private(set) var expectedContentLength: Int64
+    open fileprivate(set) var expectedContentLength: Int64
     
     /// The name of the text encoding of the receiver.
     ///
@@ -90,7 +90,7 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
     /// URL load. Clients can inspect this string and convert it to an
     /// NSStringEncoding or CFStringEncoding using the methods and
     /// functions made available in the appropriate framework.
-    public private(set) var textEncodingName: String?
+    open fileprivate(set) var textEncodingName: String?
     
     /// A suggested filename if the resource were saved to disk.
     ///
@@ -104,7 +104,7 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
     /// method appends the proper file extension based on the MIME type.
     ///
     /// This method always returns a valid filename.
-    public private(set) var suggestedFilename: String?
+    open fileprivate(set) var suggestedFilename: String?
 }
 
 /// A Response to an HTTP URL load.
@@ -113,7 +113,7 @@ public class URLResponse : NSObject, NSSecureCoding, NSCopying {
 /// HTTP URL load. It is a specialization of NSURLResponse which
 /// provides conveniences for accessing information specific to HTTP
 /// protocol responses.
-public class NSHTTPURLResponse : URLResponse {
+open class HTTPURLResponse : URLResponse {
     
     /// Initializer for NSHTTPURLResponse objects.
     ///
@@ -159,7 +159,7 @@ public class NSHTTPURLResponse : URLResponse {
     /// Convenience method which returns a localized string
     /// corresponding to the status code for this response.
     /// - Parameter forStatusCode: the status code to use to produce a localized string.
-    public class func localizedString(forStatusCode statusCode: Int) -> String {
+    open class func localizedString(forStatusCode statusCode: Int) -> String {
         switch statusCode {
         case 100: return "Continue"
         case 101: return "Switching Protocols"
@@ -231,8 +231,8 @@ public class NSHTTPURLResponse : URLResponse {
 
     /// A string that represents the contents of the NSHTTPURLResponse Object.
     /// This property is intended to produce readable output.
-    override public var description: String {
-        var result = "<\(self.dynamicType) \(unsafeAddress(of: self))> { URL: \(url!.absoluteString) }{ status: \(statusCode), headers {\n"
+    override open var description: String {
+        var result = "<\(type(of: self)) \(Unmanaged.passUnretained(self).toOpaque())> { URL: \(url!.absoluteString) }{ status: \(statusCode), headers {\n"
         for(key, value) in allHeaderFields {
             if((key.lowercased() == "content-disposition" && suggestedFilename != "Unknown") || key.lowercased() == "content-type") {
                 result += "   \"\(key)\" = \"\(value)\";\n"
@@ -357,9 +357,9 @@ private extension String {
             }
         }
         
-        let escape = UnicodeScalar(0x5c)    //  \
-        let quote = UnicodeScalar(0x22)     //  "
-        let separator = UnicodeScalar(0x3b) //  ;
+        let escape = UnicodeScalar(0x5c)!    //  \
+        let quote = UnicodeScalar(0x22)!     //  "
+        let separator = UnicodeScalar(0x3b)! //  ;
         enum State {
             case nonQuoted(String)
             case nonQuotedEscaped(String)

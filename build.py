@@ -14,11 +14,11 @@ foundation = DynamicLibrary("Foundation")
 foundation.GCC_PREFIX_HEADER = 'CoreFoundation/Base.subproj/CoreFoundation_Prefix.h'
 
 if Configuration.current.target.sdk == OSType.Linux:
-	foundation.CFLAGS = '-DDEPLOYMENT_TARGET_LINUX -D_GNU_SOURCE '
+	foundation.CFLAGS = '-DDEPLOYMENT_TARGET_LINUX -D_GNU_SOURCE -DCF_CHARACTERSET_DATA_DIR="CoreFoundation/CharacterSets"'
 	foundation.LDFLAGS = '${SWIFT_USE_LINKER} -Wl,@./CoreFoundation/linux.ld -lswiftGlibc `${PKG_CONFIG} icu-uc icu-i18n --libs` -Wl,-defsym,__CFConstantStringClassReference=_TMC10Foundation19_NSCFConstantString -Wl,-Bsymbolic '
 	Configuration.current.requires_pkg_config = True
 elif Configuration.current.target.sdk == OSType.FreeBSD:
-	foundation.CFLAGS = '-DDEPLOYMENT_TARGET_FREEBSD -I/usr/local/include -I/usr/local/include/libxml2 '
+	foundation.CFLAGS = '-DDEPLOYMENT_TARGET_FREEBSD -I/usr/local/include -I/usr/local/include/libxml2 -I/usr/local/include/curl '
 	foundation.LDFLAGS = ''
 elif Configuration.current.target.sdk == OSType.MacOSX:
 	foundation.CFLAGS = '-DDEPLOYMENT_TARGET_MACOSX '
@@ -26,6 +26,13 @@ elif Configuration.current.target.sdk == OSType.MacOSX:
 
 if Configuration.current.build_mode == Configuration.Debug:
         foundation.LDFLAGS += ' -lswiftSwiftOnoneSupport '
+
+foundation.ASFLAGS = " ".join([
+        '-DCF_CHARACTERSET_BITMAP=\\"CoreFoundation/CharacterSets/CFCharacterSetBitmaps.bitmap\\"',
+        '-DCF_CHARACTERSET_UNICHAR_DB=\\"CoreFoundation/CharacterSets/CFUniCharPropertyDatabase.data\\"',
+        '-DCF_CHARACTERSET_UNICODE_DATA_B=\\"CoreFoundation/CharacterSets/CFUnicodeData-B.mapping\\"',
+        '-DCF_CHARACTERSET_UNICODE_DATA_L=\\"CoreFoundation/CharacterSets/CFUnicodeData-L.mapping\\"',
+])
 
 # For now, we do not distinguish between public and private headers (they are all private to Foundation)
 # These are really part of CF, which should ultimately be a separate target
@@ -50,22 +57,25 @@ foundation.CFLAGS += " ".join([
 	'-Wno-int-conversion',
 	'-Wno-unused-function',
 	'-I${SYSROOT}/usr/include/libxml2',
+	'-I${SYSROOT}/usr/include/curl',
 	'-I./',
 ])
 
 swift_cflags = [
 	'-I${BUILD_DIR}/Foundation/usr/lib/swift',
-	'-I${SYSROOT}/usr/include/libxml2'
+	'-I${SYSROOT}/usr/include/libxml2',
+	'-I${SYSROOT}/usr/include/curl'
 ]
 
 if "XCTEST_BUILD_DIR" in Configuration.current.variables:
 	swift_cflags += [
 		'-I${XCTEST_BUILD_DIR}',
 		'-L${XCTEST_BUILD_DIR}',
-		'-I${SYSROOT}/usr/include/libxml2'
+		'-I${SYSROOT}/usr/include/libxml2',
+		'-I${SYSROOT}/usr/include/curl'
 	]
 
-foundation.LDFLAGS += '-lpthread -ldl -lm -lswiftCore -lxml2 '
+foundation.LDFLAGS += '-lpthread -ldl -lm -lswiftCore -lxml2 -lcurl '
 
 # Configure use of Dispatch in CoreFoundation and Foundation if libdispatch is being built
 if "LIBDISPATCH_SOURCE_DIR" in Configuration.current.variables:
@@ -121,6 +131,7 @@ public = [
 	'CoreFoundation/Collections.subproj/CFArray.h',
 	'CoreFoundation/RunLoop.subproj/CFRunLoop.h',
 	'CoreFoundation/URL.subproj/CFURLAccess.h',
+	'CoreFoundation/URL.subproj/CFURLSessionInterface.h',
 	'CoreFoundation/Locale.subproj/CFDateFormatter.h',
 	'CoreFoundation/RunLoop.subproj/CFMachPort.h',
 	'CoreFoundation/PlugIn.subproj/CFPlugInCOM.h',
@@ -133,10 +144,12 @@ public = [
 	'CoreFoundation/NumberDate.subproj/CFNumber.h',
 	'CoreFoundation/Collections.subproj/CFData.h',
 	'CoreFoundation/String.subproj/CFAttributedString.h',
+	'CoreFoundation/Base.subproj/CoreFoundation_Prefix.h'
 ],
 private = [
 	'CoreFoundation/Base.subproj/ForSwiftFoundationOnly.h',
 	'CoreFoundation/Base.subproj/ForFoundationOnly.h',
+	'CoreFoundation/Base.subproj/CFAsmMacros.h',
 	'CoreFoundation/String.subproj/CFBurstTrie.h',
 	'CoreFoundation/Error.subproj/CFError_Private.h',
 	'CoreFoundation/URL.subproj/CFURLPriv.h',
@@ -266,6 +279,7 @@ sources = CompileSources([
 	'CoreFoundation/String.subproj/CFRegularExpression.c',
 	'CoreFoundation/String.subproj/CFAttributedString.c',
 	'CoreFoundation/String.subproj/CFRunArray.c',
+	'CoreFoundation/URL.subproj/CFURLSessionInterface.c',
 ])
 
 sources.add_dependency(headers)
@@ -314,6 +328,7 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSJSONSerialization.swift',
 	'Foundation/NSKeyedCoderOldStyleArray.swift',
 	'Foundation/NSKeyedArchiver.swift',
+	'Foundation/NSKeyedArchiverHelpers.swift',
 	'Foundation/NSKeyedUnarchiver.swift',
 	'Foundation/NSLengthFormatter.swift',
 	'Foundation/NSLocale.swift',
@@ -346,7 +361,7 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSSpecialValue.swift',
 	'Foundation/NSStream.swift',
 	'Foundation/NSString.swift',
-	'Foundation/String.swift',
+	'Foundation/NSStringAPI.swift',
 	'Foundation/NSSwiftRuntime.swift',
 	'Foundation/NSTask.swift',
 	'Foundation/NSTextCheckingResult.swift',
@@ -363,7 +378,18 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSURLProtocol.swift',
 	'Foundation/NSURLRequest.swift',
 	'Foundation/NSURLResponse.swift',
-	'Foundation/NSURLSession.swift',
+	'Foundation/NSURLSession/Configuration.swift',
+	'Foundation/NSURLSession/EasyHandle.swift',
+	'Foundation/NSURLSession/HTTPBodySource.swift',
+	'Foundation/NSURLSession/HTTPMessage.swift',
+	'Foundation/NSURLSession/MultiHandle.swift',
+	'Foundation/NSURLSession/NSURLSession.swift',
+	'Foundation/NSURLSession/NSURLSessionConfiguration.swift',
+	'Foundation/NSURLSession/NSURLSessionDelegate.swift',
+	'Foundation/NSURLSession/NSURLSessionTask.swift',
+	'Foundation/NSURLSession/TaskRegistry.swift',
+	'Foundation/NSURLSession/TransferState.swift',
+	'Foundation/NSURLSession/libcurlHelpers.swift',
 	'Foundation/NSUserDefaults.swift',
 	'Foundation/NSUUID.swift',
 	'Foundation/NSValue.swift',
@@ -372,10 +398,10 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSXMLDTDNode.swift',
 	'Foundation/NSXMLElement.swift',
 	'Foundation/NSXMLNode.swift',
-	'Foundation/NSXMLNodeOptions.swift',
 	'Foundation/NSXMLParser.swift',
 	'Foundation/FoundationErrors.swift',
 	'Foundation/URL.swift',
+	'Foundation/UUID.swift',
 	'Foundation/Boxing.swift',
 	'Foundation/ReferenceConvertible.swift',
 	'Foundation/Date.swift',
@@ -395,6 +421,15 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSMeasurement.swift',
 	'Foundation/NSMeasurementFormatter.swift',
 	'Foundation/Unit.swift',
+	'Foundation/TimeZone.swift',
+	'Foundation/Calendar.swift',
+	'Foundation/Locale.swift',
+	'Foundation/String.swift',
+	'Foundation/Set.swift',
+	'Foundation/Dictionary.swift',
+	'Foundation/Array.swift',
+	'Foundation/Bridging.swift',
+	'Foundation/CGFloat.swift',
 ])
 
 swift_sources.add_dependency(headers)
@@ -459,7 +494,7 @@ build install: phony | ${BUILD_DIR}/.install
 """
 extra_script += """
 rule RunTestFoundation
-    command = echo "**** RUNNING TESTS ****\\nexecute:\\nLD_LIBRARY_PATH=${BUILD_DIR}/Foundation/:${LIBS_DIRS} ${BUILD_DIR}/TestFoundation/TestFoundation\\n**** DEBUGGING TESTS ****\\nexecute:\\nLD_LIBRARY_PATH=${LIBS_DIRS} lldb ${BUILD_DIR}/TestFoundation/TestFoundation\\n"
+    command = echo "**** RUNNING TESTS ****\\nexecute:\\nLD_LIBRARY_PATH=${BUILD_DIR}/Foundation/:${LIBS_DIRS} ${BUILD_DIR}/TestFoundation/TestFoundation\\n**** DEBUGGING TESTS ****\\nexecute:\\nLD_LIBRARY_PATH=${BUILD_DIR}/Foundation/:${LIBS_DIRS} lldb ${BUILD_DIR}/TestFoundation/TestFoundation\\n"
     description = Building Tests
 
 build ${BUILD_DIR}/.test: RunTestFoundation | TestFoundation

@@ -16,7 +16,7 @@ import Glibc
 
 import CoreFoundation
 
-public struct NSOperatingSystemVersion {
+public struct OperatingSystemVersion {
     public var majorVersion: Int
     public var minorVersion: Int
     public var patchVersion: Int
@@ -33,12 +33,9 @@ public struct NSOperatingSystemVersion {
 
 
 
-public class ProcessInfo: NSObject {
+open class ProcessInfo: NSObject {
     
-    internal static let _processInfo = ProcessInfo()
-    public class func processInfo() -> ProcessInfo {
-        return _processInfo
-    }
+    public static let processInfo = ProcessInfo()
     
     internal override init() {
         
@@ -46,83 +43,78 @@ public class ProcessInfo: NSObject {
     
     
     internal static var _environment: [String : String] = {
-        let dict = __CFGetEnvironment()._nsObject
-        var env = [String : String]()
-        dict.enumerateKeysAndObjects([]) { key, value, stop in
-            env[(key as! NSString)._swiftObject] = (value as! NSString)._swiftObject
-        }
-        return env
+        return Dictionary<String, String>._unconditionallyBridgeFromObjectiveC(__CFGetEnvironment()._nsObject)
     }()
     
-    public var environment: [String : String] {
+    open var environment: [String : String] {
         return ProcessInfo._environment
     }
     
-    public var arguments: [String] {
-        return Process.arguments // seems reasonable to flip the script here...
+    open var arguments: [String] {
+        return CommandLine.arguments // seems reasonable to flip the script here...
     }
     
-    public var hostName: String {
-        if let name = Host.currentHost().name {
+    open var hostName: String {
+        if let name = Host.current().name {
             return name
         } else {
             return "localhost"
         }
     }
     
-    public var processName: String = _CFProcessNameString()._swiftObject
+    open var processName: String = _CFProcessNameString()._swiftObject
     
-    public var processIdentifier: Int32 {
+    open var processIdentifier: Int32 {
         return __CFGetPid()
     }
     
-    public var globallyUniqueString: String {
+    open var globallyUniqueString: String {
         let uuid = CFUUIDCreate(kCFAllocatorSystemDefault)
         return CFUUIDCreateString(kCFAllocatorSystemDefault, uuid)._swiftObject
     }
 
-    public var operatingSystemVersionString: String {
+    open var operatingSystemVersionString: String {
         return CFCopySystemVersionString()?._swiftObject ?? "Unknown"
     }
     
-    public var operatingSystemVersion: NSOperatingSystemVersion {
+    open var operatingSystemVersion: OperatingSystemVersion {
         // The following fallback values match Darwin Foundation
         let fallbackMajor = -1
         let fallbackMinor = 0
         let fallbackPatch = 0
         
         guard let systemVersionDictionary = _CFCopySystemVersionDictionary() else {
-            return NSOperatingSystemVersion(majorVersion: fallbackMajor, minorVersion: fallbackMinor, patchVersion: fallbackPatch)
+            return OperatingSystemVersion(majorVersion: fallbackMajor, minorVersion: fallbackMinor, patchVersion: fallbackPatch)
         }
         
-        let productVersionKey = unsafeBitCast(_kCFSystemVersionProductVersionKey, to: UnsafePointer<Void>.self)
+        let productVersionKey = unsafeBitCast(_kCFSystemVersionProductVersionKey, to: UnsafeRawPointer.self)
         guard let productVersion = unsafeBitCast(CFDictionaryGetValue(systemVersionDictionary, productVersionKey), to: NSString!.self) else {
-            return NSOperatingSystemVersion(majorVersion: fallbackMajor, minorVersion: fallbackMinor, patchVersion: fallbackPatch)
+            return OperatingSystemVersion(majorVersion: fallbackMajor, minorVersion: fallbackMinor, patchVersion: fallbackPatch)
         }
         
         let versionComponents = productVersion._swiftObject.characters.split(separator: ".").flatMap(String.init).flatMap({ Int($0) })
         let majorVersion = versionComponents.dropFirst(0).first ?? fallbackMajor
         let minorVersion = versionComponents.dropFirst(1).first ?? fallbackMinor
         let patchVersion = versionComponents.dropFirst(2).first ?? fallbackPatch
-        return NSOperatingSystemVersion(majorVersion: majorVersion, minorVersion: minorVersion, patchVersion: patchVersion)
+        return OperatingSystemVersion(majorVersion: majorVersion, minorVersion: minorVersion, patchVersion: patchVersion)
     }
     
     internal let _processorCount = __CFProcessorCount()
-    public var processorCount: Int {
+    open var processorCount: Int {
         return Int(_processorCount)
     }
     
     internal let _activeProcessorCount = __CFActiveProcessorCount()
-    public var activeProcessorCount: Int {
+    open var activeProcessorCount: Int {
         return Int(_activeProcessorCount)
     }
     
     internal let _physicalMemory = __CFMemorySize()
-    public var physicalMemory: UInt64 {
+    open var physicalMemory: UInt64 {
         return _physicalMemory
     }
     
-    public func isOperatingSystemAtLeastVersion(_ version: NSOperatingSystemVersion) -> Bool {
+    open func isOperatingSystemAtLeast(_ version: OperatingSystemVersion) -> Bool {
         let ourVersion = operatingSystemVersion
         if ourVersion.majorVersion < version.majorVersion {
             return false
@@ -145,7 +137,7 @@ public class ProcessInfo: NSObject {
         return true
     }
     
-    public var systemUptime: TimeInterval {
+    open var systemUptime: TimeInterval {
         return CFGetSystemUptime()
     }
 }

@@ -10,12 +10,12 @@
 
 import CoreFoundation
 
-internal func __NSFireTimer(_ timer: CFRunLoopTimer?, info: UnsafeMutablePointer<Void>?) -> Void {
+internal func __NSFireTimer(_ timer: CFRunLoopTimer?, info: UnsafeMutableRawPointer?) -> Void {
     let t: Timer = NSObject.unretainedReference(info!)
     t._fire(t)
 }
 
-public class Timer: NSObject {
+open class Timer : NSObject {
     typealias CFType = CFRunLoopTimer
     
     internal var _cfObject: CFType {
@@ -34,14 +34,15 @@ public class Timer: NSObject {
     /// - Experiment: This is a draft API currently under consideration for official import into Foundation as a suitable alternative to creation via selector
     /// - Note: Since this API is under consideration it may be either removed or revised in the near future
     /// - Warning: Capturing the timer or the owner of the timer inside of the block may cause retain cycles. Use with caution
-    public init(fire date: Date, interval: TimeInterval, repeats: Bool, block: (Timer) -> Swift.Void) {
+    public init(fire date: Date, interval: TimeInterval, repeats: Bool, block: @escaping (Timer) -> Swift.Void) {
         super.init()
         _fire = block
         var context = CFRunLoopTimerContext()
         withRetainedReference {
-            context.info = $0
+            (refPtr: UnsafeMutablePointer<UInt8>) in
+            context.info = UnsafeMutableRawPointer(refPtr)
         }
-        let timer = withUnsafeMutablePointer(&context) { (ctx: UnsafeMutablePointer<CFRunLoopTimerContext>) -> CFRunLoopTimer in
+        let timer = withUnsafeMutablePointer(to: &context) { (ctx: UnsafeMutablePointer<CFRunLoopTimerContext>) -> CFRunLoopTimer in
             var t = interval
             if !repeats {
                 t = 0.0
@@ -51,18 +52,29 @@ public class Timer: NSObject {
         _timer = timer
     }
     
+    // !!! The interface as exposed by Darwin marks init(fire date: Date, interval: TimeInterval, repeats: Bool, block: @escaping (Timer) -> Swift.Void) with "convenience", but this constructor without.
+    // !!! That doesn't make sense as init(fire date: Date, ...) is more general than this constructor, which can be implemented in terms of init(fire date: Date, ...).
+    // !!! The convenience here has been switched around and deliberately does not match what is exposed by Darwin Foundation.
+    /// Creates and returns a new Timer object initialized with the specified block object.
+    /// - parameter:  timeInterval  The number of seconds between firings of the timer. If seconds is less than or equal to 0.0, this method chooses the nonnegative value of 0.1 milliseconds instead
+    /// - parameter:  repeats  If YES, the timer will repeatedly reschedule itself until invalidated. If NO, the timer will be invalidated after it fires.
+    /// - parameter:  block  The execution body of the timer; the timer itself is passed as the parameter to this block when executed to aid in avoiding cyclical references
+    public convenience init(timeInterval interval: TimeInterval, repeats: Bool, block: @escaping (Timer) -> Swift.Void) {
+        self.init(fire: Date(), interval: interval, repeats: repeats, block: block)
+    }
+    
     /// Alternative API for timer creation with a block.
     /// - Experiment: This is a draft API currently under consideration for official import into Foundation as a suitable alternative to creation via selector
     /// - Note: Since this API is under consideration it may be either removed or revised in the near future
     /// - Warning: Capturing the timer or the owner of the timer inside of the block may cause retain cycles. Use with caution
-    public class func scheduledTimer(withTimeInterval interval: TimeInterval, repeats: Bool, block: (Timer) -> Void) -> Timer {
+    open class func scheduledTimer(withTimeInterval interval: TimeInterval, repeats: Bool, block: @escaping (Timer) -> Void) -> Timer {
         let timer = Timer(fire: Date(timeIntervalSinceNow: interval), interval: interval, repeats: repeats, block: block)
         CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer._timer!, kCFRunLoopDefaultMode)
         return timer
     }
     
-    public func fire() {
-        if !valid {
+    open func fire() {
+        if !isValid {
             return
         }
         _fire(self)
@@ -71,7 +83,7 @@ public class Timer: NSObject {
         }
     }
 
-    public var fireDate: Date {
+    open var fireDate: Date {
         get {
             return Date(timeIntervalSinceReferenceDate: CFRunLoopTimerGetNextFireDate(_timer!))
         }
@@ -80,11 +92,11 @@ public class Timer: NSObject {
         }
     }
     
-    public var timeInterval: TimeInterval {
+    open var timeInterval: TimeInterval {
         return CFRunLoopTimerGetInterval(_timer!)
     }
 
-    public var tolerance: TimeInterval {
+    open var tolerance: TimeInterval {
         get {
             return CFRunLoopTimerGetTolerance(_timer!)
         }
@@ -93,11 +105,17 @@ public class Timer: NSObject {
         }
     }
     
-    public func invalidate() {
+    open func invalidate() {
         CFRunLoopTimerInvalidate(_timer!)
     }
 
-    public var valid: Bool {
+    open var isValid: Bool {
         return CFRunLoopTimerIsValid(_timer!)
+    }
+    
+    // Timer's userInfo is meant to be read-only. The initializers that are exposed on Swift, however, do not take a custom userInfo, so it can never be set.
+    // The default value should then be nil, and this is left as subclassable for potential consumers.
+    open var userInfo: Any? {
+        return nil
     }
 }

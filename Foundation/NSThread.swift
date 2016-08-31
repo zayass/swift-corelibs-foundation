@@ -46,7 +46,7 @@ internal enum _NSThreadStatus {
     case finished
 }
 
-private func NSThreadStart(_ context: UnsafeMutablePointer<Void>?) -> UnsafeMutablePointer<Void>? {
+private func NSThreadStart(_ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
     let thread: Thread = NSObject.unretainedReference(context!)
     Thread._currentThread.set(thread)
     thread._status = .executing
@@ -56,28 +56,33 @@ private func NSThreadStart(_ context: UnsafeMutablePointer<Void>?) -> UnsafeMuta
     return nil
 }
 
-public class Thread: NSObject {
+open class Thread : NSObject {
     
     static internal var _currentThread = NSThreadSpecific<Thread>()
-    public static var current: Thread {
+    open class var current: Thread {
         return Thread._currentThread.get() {
             return Thread(thread: pthread_self())
         }
     }
+    
+    open class var isMainThread: Bool { NSUnimplemented() }
+    
+    // !!! NSThread's mainThread property is incorrectly exported as "main", which conflicts with its "main" method.
+    open class var mainThread: Thread { NSUnimplemented() }
 
     /// Alternative API for detached thread creation
     /// - Experiment: This is a draft API currently under consideration for official import into Foundation as a suitable alternative to creation via selector
     /// - Note: Since this API is under consideration it may be either removed or revised in the near future
-    public class func detachNewThread(_ main: (Void) -> Void) {
-        let t = Thread(main)
+    open class func detachNewThread(_ block: @escaping () -> Swift.Void) {
+        let t = Thread(block: block)
         t.start()
     }
     
-    public class func isMultiThreaded() -> Bool {
+    open class func isMultiThreaded() -> Bool {
         return true
     }
     
-    public class func sleepUntilDate(_ date: Date) {
+    open class func sleep(until date: Date) {
         let start_ut = CFGetSystemUptime()
         let start_at = CFAbsoluteTimeGetCurrent()
         let end_at = date.timeIntervalSinceReferenceDate
@@ -87,20 +92,20 @@ public class Thread: NSObject {
             var __ts__ = timespec(tv_sec: LONG_MAX, tv_nsec: 0)
             if ti < Double(LONG_MAX) {
                 var integ = 0.0
-                let frac: Double = withUnsafeMutablePointer(&integ) { integp in
+                let frac: Double = withUnsafeMutablePointer(to: &integ) { integp in
                     return modf(ti, integp)
                 }
                 __ts__.tv_sec = Int(integ)
                 __ts__.tv_nsec = Int(frac * 1000000000.0)
             }
-            let _ = withUnsafePointer(&__ts__) { ts in
+            let _ = withUnsafePointer(to: &__ts__) { ts in
                 nanosleep(ts, nil)
             }
             ti = end_ut - CFGetSystemUptime()
         }
     }
 
-    public class func sleepForTimeInterval(_ interval: TimeInterval) {
+    open class func sleep(forTimeInterval interval: TimeInterval) {
         var ti = interval
         let start_ut = CFGetSystemUptime()
         let end_ut = start_ut + ti
@@ -108,20 +113,20 @@ public class Thread: NSObject {
             var __ts__ = timespec(tv_sec: LONG_MAX, tv_nsec: 0)
             if ti < Double(LONG_MAX) {
                 var integ = 0.0
-                let frac: Double = withUnsafeMutablePointer(&integ) { integp in
+                let frac: Double = withUnsafeMutablePointer(to: &integ) { integp in
                     return modf(ti, integp)
                 }
                 __ts__.tv_sec = Int(integ)
                 __ts__.tv_nsec = Int(frac * 1000000000.0)
             }
-            let _ = withUnsafePointer(&__ts__) { ts in
+            let _ = withUnsafePointer(to: &__ts__) { ts in
                 nanosleep(ts, nil)
             }
             ti = end_ut - CFGetSystemUptime()
         }
     }
 
-    public class func exit() {
+    open class func exit() {
         pthread_exit(nil)
     }
     
@@ -135,23 +140,27 @@ public class Thread: NSObject {
     internal var _status = _NSThreadStatus.initialized
     internal var _cancelled = false
     /// - Note: this differs from the Darwin implementation in that the keys must be Strings
-    public var threadDictionary = [String:AnyObject]()
+    open var threadDictionary = [String : AnyObject]()
     
     internal init(thread: pthread_t) {
         // Note: even on Darwin this is a non-optional pthread_t; this is only used for valid threads, which are never null pointers.
         _thread = thread
     }
-
-    public init(_ main: (Void) -> Void) {
-        _main = main
-        let _ = withUnsafeMutablePointer(&_attr) { attr in
+    
+    public override init() {
+        let _ = withUnsafeMutablePointer(to: &_attr) { attr in
             pthread_attr_init(attr)
             pthread_attr_setscope(attr, Int32(PTHREAD_SCOPE_SYSTEM))
             pthread_attr_setdetachstate(attr, Int32(PTHREAD_CREATE_DETACHED))
         }
     }
+    
+    public convenience init(block: @escaping () -> Swift.Void) {
+        self.init()
+        _main = block
+    }
 
-    public func start() {
+    open func start() {
         precondition(_status == .initialized, "attempting to start a thread that has already been started")
         _status = .starting
         if _cancelled {
@@ -163,16 +172,22 @@ public class Thread: NSObject {
         }
     }
     
-    public func main() {
+    open func main() {
         _main()
     }
+    
+    open var name: String? {
+        NSUnimplemented()
+    }
 
-    public var stackSize: Int {
+    open var stackSize: Int {
         get {
             var size: Int = 0
-            return withUnsafeMutablePointers(&_attr, &size) { attr, sz in
-                pthread_attr_getstacksize(attr, sz)
-                return sz.pointee
+            return withUnsafeMutablePointer(to: &_attr) { attr in
+                withUnsafeMutablePointer(to: &size) { sz in
+                    pthread_attr_getstacksize(attr, sz)
+                    return sz.pointee
+                }
             }
         }
         set {
@@ -181,33 +196,43 @@ public class Thread: NSObject {
             if (1 << 30) < s {
                 s = 1 << 30
             }
-            let _ = withUnsafeMutablePointer(&_attr) { attr in
+            let _ = withUnsafeMutablePointer(to: &_attr) { attr in
                 pthread_attr_setstacksize(attr, s)
             }
         }
     }
 
-    public var executing: Bool {
+    open var isExecuting: Bool {
         return _status == .executing
     }
 
-    public var finished: Bool {
+    open var isFinished: Bool {
         return _status == .finished
     }
     
-    public var cancelled: Bool {
+    open var isCancelled: Bool {
         return _cancelled
     }
     
-    public func cancel() {
-        _cancelled = true
-    }
-
-    public class func callStackReturnAddresses() -> [NSNumber] {
+    open var isMainThread: Bool {
         NSUnimplemented()
     }
     
-    public class func callStackSymbols() -> [String] {
+    open func cancel() {
+        _cancelled = true
+    }
+
+    open class var callStackReturnAddresses: [NSNumber] {
         NSUnimplemented()
     }
+    
+    open class var callStackSymbols: [String] {
+        NSUnimplemented()
+    }
+}
+
+extension NSNotification.Name {
+    public static let NSWillBecomeMultiThreaded = NSNotification.Name(rawValue: "") // NSUnimplemented
+    public static let NSDidBecomeSingleThreaded = NSNotification.Name(rawValue: "") // NSUnimplemented
+    public static let NSThreadWillExit = NSNotification.Name(rawValue: "") // NSUnimplemented
 }

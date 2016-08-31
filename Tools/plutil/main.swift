@@ -201,7 +201,7 @@ enum DisplayType {
 
 extension Dictionary {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(repeating: Character(" "), count: indent * 2)
+        let indentation = String(repeating: " ", count: indent * 2)
         if type == .Primary || type == .Key {
             print("\(indentation)[\n", terminator: "")
         } else {
@@ -212,7 +212,7 @@ extension Dictionary {
             if let key = $0.0 as? String {
                 key.display(indent + 1, type: .Key)
             } else {
-                fatalError("plists should have strings as keys but got a \($0.0.dynamicType)")
+                fatalError("plists should have strings as keys but got a \(type(of: $0.0))")
             }
             print(" => ", terminator: "")
             displayPlist($0.1, indent: indent + 1, type: .Value)
@@ -224,7 +224,7 @@ extension Dictionary {
 
 extension Array {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(repeating: Character(" "), count: indent * 2)
+        let indentation = String(repeating: " ", count: indent * 2)
         if type == .Primary || type == .Key {
             print("\(indentation)[\n", terminator: "")
         } else {
@@ -242,7 +242,7 @@ extension Array {
 
 extension String {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(repeating: Character(" "), count: indent * 2)
+        let indentation = String(repeating: " ", count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self)\"\n", terminator: "")
         }
@@ -256,7 +256,7 @@ extension String {
 
 extension Bool {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(repeating: Character(" "), count: indent * 2)
+        let indentation = String(repeating: " ", count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self ? "1" : "0")\"\n", terminator: "")
         }
@@ -270,7 +270,7 @@ extension Bool {
 
 extension NSNumber {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(repeating: Character(" "), count: indent * 2)
+        let indentation = String(repeating: " ", count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self)\"\n", terminator: "")
         }
@@ -284,7 +284,7 @@ extension NSNumber {
 
 extension NSData {
     func display(_ indent: Int = 0, type: DisplayType = .Primary) {
-        let indentation = String(repeating: Character(" "), count: indent * 2)
+        let indentation = String(repeating: " ", count: indent * 2)
         if type == .Primary {
             print("\(indentation)\"\(self)\"\n", terminator: "")
         }
@@ -310,7 +310,7 @@ func displayPlist(_ plist: Any, indent: Int = 0, type: DisplayType = .Primary) {
     } else if let val = plist as? NSData {
         val.display(indent, type: type)
     } else {
-        fatalError("unhandled type \(plist.dynamicType)")
+        fatalError("unhandled type \(type(of: plist))")
     }
 }
 
@@ -354,7 +354,7 @@ func display(_ options: Options) -> Int32 {
 }
 
 func main() -> Int32 {
-    var args = ProcessInfo.processInfo().arguments
+    var args = ProcessInfo.processInfo.arguments
     
     if args.count < 2 {
         print("No files specified.")

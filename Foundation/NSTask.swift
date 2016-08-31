@@ -28,30 +28,30 @@ private func WEXITSTATUS(_ status: CInt) -> CInt {
 
 private var managerThreadRunLoop : RunLoop? = nil
 private var managerThreadRunLoopIsRunning = false
-private var managerThreadRunLoopIsRunningCondition = Condition()
+private var managerThreadRunLoopIsRunningCondition = NSCondition()
 
 #if os(OSX) || os(iOS)
 internal let kCFSocketDataCallBack = CFSocketCallBackType.dataCallBack.rawValue
 #endif
 
-private func emptyRunLoopCallback(_ context : UnsafeMutablePointer<Void>?) -> Void {}
+private func emptyRunLoopCallback(_ context : UnsafeMutableRawPointer?) -> Void {}
 
 
 // Retain method for run loop source
-private func runLoopSourceRetain(_ pointer : UnsafePointer<Void>?) -> UnsafePointer<Void>? {
+private func runLoopSourceRetain(_ pointer : UnsafeRawPointer?) -> UnsafeRawPointer? {
     let ref = Unmanaged<AnyObject>.fromOpaque(pointer!).takeUnretainedValue()
     let retained = Unmanaged<AnyObject>.passRetained(ref)
-    return unsafeBitCast(retained, to: UnsafePointer<Void>.self)
+    return unsafeBitCast(retained, to: UnsafeRawPointer.self)
 }
 
 // Release method for run loop source
-private func runLoopSourceRelease(_ pointer : UnsafePointer<Void>?) -> Void {
+private func runLoopSourceRelease(_ pointer : UnsafeRawPointer?) -> Void {
     Unmanaged<AnyObject>.fromOpaque(pointer!).release()
 }
 
 // Equal method for run loop source
 
-private func runloopIsEqual(_ a : UnsafePointer<Void>?, _ b : UnsafePointer<Void>?) -> _DarwinCompatibleBoolean {
+private func runloopIsEqual(_ a : UnsafeRawPointer?, _ b : UnsafeRawPointer?) -> _DarwinCompatibleBoolean {
     
     let unmanagedrunLoopA = Unmanaged<AnyObject>.fromOpaque(a!)
     guard let runLoopA = unmanagedrunLoopA.takeUnretainedValue() as? RunLoop else {
@@ -72,7 +72,7 @@ private func runloopIsEqual(_ a : UnsafePointer<Void>?, _ b : UnsafePointer<Void
 
 
 // Equal method for task in run loop source
-private func nstaskIsEqual(_ a : UnsafePointer<Void>?, _ b : UnsafePointer<Void>?) -> _DarwinCompatibleBoolean {
+private func nstaskIsEqual(_ a : UnsafeRawPointer?, _ b : UnsafeRawPointer?) -> _DarwinCompatibleBoolean {
     
     let unmanagedTaskA = Unmanaged<AnyObject>.fromOpaque(a!)
     guard let taskA = unmanagedTaskA.takeUnretainedValue() as? Task else {
@@ -91,16 +91,16 @@ private func nstaskIsEqual(_ a : UnsafePointer<Void>?, _ b : UnsafePointer<Void>
     return true
 }
 
-public class Task: NSObject {
+open class Task: NSObject {
     private static func setup() {
         struct Once {
             static var done = false
-            static let lock = Lock()
+            static let lock = NSLock()
         }
         Once.lock.synchronized {
             if !Once.done {
                 let thread = Thread {
-                    managerThreadRunLoop = RunLoop.current()
+                    managerThreadRunLoop = RunLoop.current
                     var emptySourceContext = CFRunLoopSourceContext()
                     emptySourceContext.version = 0
                     emptySourceContext.retain = runLoopSourceRetain
@@ -108,7 +108,8 @@ public class Task: NSObject {
                     emptySourceContext.equal = runloopIsEqual
                     emptySourceContext.perform = emptyRunLoopCallback
                     managerThreadRunLoop!.withUnretainedReference {
-                        emptySourceContext.info = $0
+                        (refPtr: UnsafeMutablePointer<UInt8>) in
+                        emptySourceContext.info = UnsafeMutableRawPointer(refPtr)
                     }
                     
                     CFRunLoopAddSource(managerThreadRunLoop?._cfRunLoop, CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &emptySourceContext), kCFRunLoopDefaultMode)
@@ -147,26 +148,26 @@ public class Task: NSObject {
     }
     
     // these methods can only be set before a launch
-    public var launchPath: String?
-    public var arguments: [String]?
-    public var environment: [String : String]? // if not set, use current
+    open var launchPath: String?
+    open var arguments: [String]?
+    open var environment: [String : String]? // if not set, use current
     
-    public var currentDirectoryPath: String = FileManager.defaultInstance.currentDirectoryPath
+    open var currentDirectoryPath: String = FileManager.default.currentDirectoryPath
     
     // standard I/O channels; could be either an NSFileHandle or an NSPipe
-    public var standardInput: AnyObject? {
+    open var standardInput: AnyObject? {
         willSet {
             precondition(newValue is Pipe || newValue is FileHandle,
                          "standardInput must be either NSPipe or NSFileHandle")
         }
     }
-    public var standardOutput: AnyObject? {
+    open var standardOutput: AnyObject? {
         willSet {
             precondition(newValue is Pipe || newValue is FileHandle,
                          "standardOutput must be either NSPipe or NSFileHandle")
         }
     }
-    public var standardError: AnyObject? {
+    open var standardError: AnyObject? {
         willSet {
             precondition(newValue is Pipe || newValue is FileHandle,
                          "standardError must be either NSPipe or NSFileHandle")
@@ -176,12 +177,12 @@ public class Task: NSObject {
     private var runLoopSourceContext : CFRunLoopSourceContext?
     private var runLoopSource : CFRunLoopSource?
     
-    private weak var runLoop : RunLoop? = nil
+    fileprivate weak var runLoop : RunLoop? = nil
     
-    private var processLaunchedCondition = Condition()
+    private var processLaunchedCondition = NSCondition()
     
     // actions
-    public func launch() {
+    open func launch() {
         
         self.processLaunchedCondition.lock()
     
@@ -204,26 +205,26 @@ public class Task: NSObject {
         
         let argv : UnsafeMutablePointer<UnsafeMutablePointer<Int8>?> = args.withUnsafeBufferPointer {
             let array : UnsafeBufferPointer<String> = $0
-            let buffer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>(allocatingCapacity: array.count + 1)
-            buffer.initializeFrom(array.map { $0.withCString(strdup) })
+            let buffer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: array.count + 1)
+            buffer.initialize(from: array.map { $0.withCString(strdup) })
             buffer[array.count] = nil
             return buffer
         }
         
         defer {
             for arg in argv ..< argv + args.count {
-                free(UnsafeMutablePointer<Void>(arg.pointee))
+                free(UnsafeMutableRawPointer(arg.pointee))
             }
             
-            argv.deallocateCapacity(args.count + 1)
+            argv.deallocate(capacity: args.count + 1)
         }
         
         let envp: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>
         
         if let env = environment {
             let nenv = env.count
-            envp = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>(allocatingCapacity: 1 + nenv)
-            envp.initializeFrom(env.map { strdup("\($0)=\($1)") })
+            envp = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: 1 + nenv)
+            envp.initialize(from: env.map { strdup("\($0)=\($1)") })
             envp[env.count] = nil
         } else {
             envp = _CFEnviron()
@@ -232,9 +233,9 @@ public class Task: NSObject {
         defer {
             if let env = environment {
                 for pair in envp ..< envp + env.count {
-                    free(UnsafeMutablePointer<Void>(pair.pointee))
+                    free(UnsafeMutableRawPointer(pair.pointee))
                 }
-                envp.deallocateCapacity(env.count + 1)
+                envp.deallocate(capacity: env.count + 1)
             }
         }
 
@@ -244,7 +245,7 @@ public class Task: NSObject {
         context.version = 0
         context.retain = runLoopSourceRetain
         context.release = runLoopSourceRelease
-		context.info = UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self).toOpaque())
+	context.info = Unmanaged.passUnretained(self).toOpaque()
         
         let socket = CFSocketCreateWithNative( nil, taskSocketPair[0], CFOptionFlags(kCFSocketDataCallBack), {
             (socket, type, address, data, info )  in
@@ -366,9 +367,9 @@ public class Task: NSObject {
 
         close(taskSocketPair[1])
         
-        self.runLoop = RunLoop.current()
+        self.runLoop = RunLoop.current
         self.runLoopSourceContext = CFRunLoopSourceContext(version: 0,
-                                                           info: UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self).toOpaque()),
+                                                           info: Unmanaged.passUnretained(self).toOpaque(),
                                                            retain: { return runLoopSourceRetain($0) },
                                                            release: { runLoopSourceRelease($0) },
                                                            copyDescription: nil,
@@ -386,7 +387,8 @@ public class Task: NSObject {
         runLoopContext.equal = nstaskIsEqual
         runLoopContext.perform = emptyRunLoopCallback
         self.withUnretainedReference {
-            runLoopContext.info = $0
+            (refPtr: UnsafeMutablePointer<UInt8>) in
+            runLoopContext.info = UnsafeMutableRawPointer(refPtr)
         }
         self.runLoopSourceContext = runLoopContext
         
@@ -401,30 +403,30 @@ public class Task: NSObject {
         self.processLaunchedCondition.broadcast()
     }
     
-    public func interrupt() { NSUnimplemented() } // Not always possible. Sends SIGINT.
-    public func terminate()  { NSUnimplemented() }// Not always possible. Sends SIGTERM.
+    open func interrupt() { NSUnimplemented() } // Not always possible. Sends SIGINT.
+    open func terminate()  { NSUnimplemented() }// Not always possible. Sends SIGTERM.
     
-    public func suspend() -> Bool { NSUnimplemented() }
-    public func resume() -> Bool { NSUnimplemented() }
+    open func suspend() -> Bool { NSUnimplemented() }
+    open func resume() -> Bool { NSUnimplemented() }
     
     // status
-    public private(set) var processIdentifier: Int32 = -1
-    public private(set) var running: Bool = false
+    open private(set) var processIdentifier: Int32 = -1
+    open private(set) var running: Bool = false
     
-    public private(set) var terminationStatus: Int32 = 0
-    public var terminationReason: TerminationReason { NSUnimplemented() }
+    open private(set) var terminationStatus: Int32 = 0
+    open var terminationReason: TerminationReason { NSUnimplemented() }
     
     /*
     A block to be invoked when the process underlying the NSTask terminates.  Setting the block to nil is valid, and stops the previous block from being invoked, as long as it hasn't started in any way.  The NSTask is passed as the argument to the block so the block does not have to capture, and thus retain, it.  The block is copied when set.  Only one termination handler block can be set at any time.  The execution context in which the block is invoked is undefined.  If the NSTask has already finished, the block is executed immediately/soon (not necessarily on the current thread).  If a terminationHandler is set on an NSTask, the NSTaskDidTerminateNotification notification is not posted for that task.  Also note that -waitUntilExit won't wait until the terminationHandler has been fully executed.  You cannot use this property in a concrete subclass of NSTask which hasn't been updated to include an implementation of the storage and use of it.  
     */
-    public var terminationHandler: ((Task) -> Void)?
-    public var qualityOfService: NSQualityOfService = .default  // read-only after the task is launched
+    open var terminationHandler: ((Task) -> Void)?
+    open var qualityOfService: NSQualityOfService = .default  // read-only after the task is launched
 }
 
 extension Task {
     
     // convenience; create and launch
-    public class func launchedTaskWithLaunchPath(_ path: String, arguments: [String]) -> Task {
+    open class func launchedTaskWithLaunchPath(_ path: String, arguments: [String]) -> Task {
         let task = Task()
         task.launchPath = path
         task.arguments = arguments
@@ -434,11 +436,11 @@ extension Task {
     }
     
     // poll the runLoop in defaultMode until task completes
-    public func waitUntilExit() {
+    open func waitUntilExit() {
         
         repeat {
             
-        } while( self.running == true && RunLoop.current().run(mode: .defaultRunLoopMode, before: Date(timeIntervalSinceNow: 0.05)) )
+        } while( self.running == true && RunLoop.current.run(mode: .defaultRunLoopMode, before: Date(timeIntervalSinceNow: 0.05)) )
         
         self.runLoop = nil
     }

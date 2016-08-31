@@ -69,18 +69,18 @@ extension XMLDTDNode {
 		<li><b>Element declaration</b> - the validation string</li>
 		<li><b>Notation declaration</b> - no objectValue</li></ul>
 */
-public class XMLDTDNode: XMLNode {
+open class XMLDTDNode: XMLNode {
     
     /*!
         @method initWithXMLString:
         @abstract Returns an element, attribute, entity, or notation DTD node based on the full XML string.
     */
-    public init?(XMLString string: String) {
+    public init?(xmlString string: String) {
         guard let ptr = _CFXMLParseDTDNode(string) else { return nil }
         super.init(ptr: ptr)
     } //primitive
     
-    public override init(kind: XMLNode.Kind, options: Int) {
+    public override init(kind: Kind, options: Options = []) {
         let ptr: _CFXMLNodePtr
 
         switch kind {
@@ -93,13 +93,13 @@ public class XMLDTDNode: XMLNode {
         }
 
         super.init(ptr: ptr)
-    } //primitive
+    }
     
     /*!
-        @method DTDKind
+        @method dtdKind
         @abstract Sets the DTD sub kind.
     */
-    public var dtdKind: DTDKind {
+    open var dtdKind: DTDKind {
         switch _CFXMLNodeGetType(_xmlNode) {
         case _kCFXMLDTDNodeTypeElement:
             switch _CFXMLDTDElementNodeGetType(_xmlNode) {
@@ -184,21 +184,21 @@ public class XMLDTDNode: XMLNode {
         default:
             fatalError("This is not actually a DTD node!")
         }
-    }//primitive
+    }
     
     /*!
         @method isExternal
         @abstract True if the system id is set. Valid for entities and notations.
     */
-    public var external: Bool {
+    open var isExternal: Bool {
         return systemID != nil
     } //primitive
     
     /*!
-        @method publicID
-        @abstract Sets the public id. This identifier should be in the default catalog in /etc/xml/catalog or in a path specified by the environment variable XML_CATALOG_FILES. When the public id is set the system id must also be set. Valid for entities and notations.
+        @method openID
+        @abstract Sets the open id. This identifier should be in the default catalog in /etc/xml/catalog or in a path specified by the environment variable XML_CATALOG_FILES. When the public id is set the system id must also be set. Valid for entities and notations.
     */
-    public var publicID: String? {
+    open var publicID: String? {
         get {
             return _CFXMLDTDNodeGetPublicID(_xmlNode)?._swiftObject
         }
@@ -215,7 +215,7 @@ public class XMLDTDNode: XMLNode {
         @method systemID
         @abstract Sets the system id. This should be a URL that points to a valid DTD. Valid for entities and notations.
     */
-    public var systemID: String? {
+    open var systemID: String? {
         get {
             return _CFXMLDTDNodeGetSystemID(_xmlNode)?._swiftObject
         }
@@ -232,7 +232,7 @@ public class XMLDTDNode: XMLNode {
         @method notationName
         @abstract Set the notation name. Valid for entities only.
     */
-    public var notationName: String? {
+    open var notationName: String? {
         get {
             guard dtdKind == .unparsed else {
                 return nil

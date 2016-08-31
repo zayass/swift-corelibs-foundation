@@ -15,26 +15,26 @@ import Darwin
 import Glibc
 #endif
 
-public class FileHandle: NSObject, NSSecureCoding {
+open class FileHandle : NSObject, NSSecureCoding {
     internal var _fd: Int32
     internal var _closeOnDealloc: Bool
     internal var _closed: Bool = false
     
-    public var availableData: Data {
+    open var availableData: Data {
         return _readDataOfLength(Int.max, untilEOF: false)
     }
     
-    public func readDataToEndOfFile() -> Data {
+    open func readDataToEndOfFile() -> Data {
         return readData(ofLength: Int.max)
     }
 
-    public func readData(ofLength length: Int) -> Data {
+    open func readData(ofLength length: Int) -> Data {
         return _readDataOfLength(length, untilEOF: true)
     }
 
     internal func _readDataOfLength(_ length: Int, untilEOF: Bool) -> Data {
         var statbuf = stat()
-        var dynamicBuffer: UnsafeMutablePointer<UInt8>? = nil
+        var dynamicBuffer: UnsafeMutableRawPointer? = nil
         var total = 0
         if _closed || fstat(_fd, &statbuf) < 0 {
             fatalError("Unable to read file")
@@ -42,14 +42,14 @@ public class FileHandle: NSObject, NSSecureCoding {
         if statbuf.st_mode & S_IFMT != S_IFREG {
             /* We get here on sockets, character special files, FIFOs ... */
             var currentAllocationSize: size_t = 1024 * 8
-            dynamicBuffer = UnsafeMutablePointer<UInt8>(malloc(currentAllocationSize))
+            dynamicBuffer = malloc(currentAllocationSize)
             var remaining = length
             while remaining > 0 {
                 let amountToRead = min(1024 * 8, remaining)
                 // Make sure there is always at least amountToRead bytes available in the buffer.
                 if (currentAllocationSize - total) < amountToRead {
                     currentAllocationSize *= 2
-                    dynamicBuffer = UnsafeMutablePointer<UInt8>(_CFReallocf(UnsafeMutablePointer<Void>(dynamicBuffer!), currentAllocationSize))
+                    dynamicBuffer = _CFReallocf(dynamicBuffer!, currentAllocationSize)
                     if dynamicBuffer == nil {
                         fatalError("unable to allocate backing buffer")
                     }
@@ -79,7 +79,7 @@ public class FileHandle: NSObject, NSSecureCoding {
                 var remaining = size_t(statbuf.st_size - offset)
                 remaining = min(remaining, size_t(length))
                 
-                dynamicBuffer = UnsafeMutablePointer<UInt8>(malloc(remaining))
+                dynamicBuffer = malloc(remaining)
                 if dynamicBuffer == nil {
                     fatalError("Malloc failure")
                 }
@@ -100,7 +100,7 @@ public class FileHandle: NSObject, NSSecureCoding {
         }
 
         if length == Int.max && total > 0 {
-            dynamicBuffer = UnsafeMutablePointer<UInt8>(_CFReallocf(UnsafeMutablePointer<Void>(dynamicBuffer!), total))
+            dynamicBuffer = _CFReallocf(dynamicBuffer!, total)
         }
         
         if (0 == total) {
@@ -108,16 +108,17 @@ public class FileHandle: NSObject, NSSecureCoding {
         }
         
         if total > 0 {
-            return Data(bytesNoCopy: dynamicBuffer!, count: total, deallocator: .none)
+            let bytePtr = dynamicBuffer!.bindMemory(to: UInt8.self, capacity: total)
+            return Data(bytesNoCopy: bytePtr, count: total, deallocator: .none)
         }
         
         return Data()
     }
     
-    public func write(_ data: Data) {
+    open func write(_ data: Data) {
         data.enumerateBytes() { (bytes, range, stop) in
             do {
-                try NSData.writeToFileDescriptor(self._fd, path: nil, buf: UnsafePointer<Void>(bytes.baseAddress!), length: bytes.count)
+                try NSData.write(toFileDescriptor: self._fd, path: nil, buf: UnsafeRawPointer(bytes.baseAddress!), length: bytes.count)
             } catch {
                 fatalError("Write failure")
             }
@@ -126,29 +127,29 @@ public class FileHandle: NSObject, NSSecureCoding {
     
     // TODO: Error handling.
     
-    public var offsetInFile: UInt64 {
+    open var offsetInFile: UInt64 {
         return UInt64(lseek(_fd, 0, L_INCR))
     }
     
-    public func seekToEndOfFile() -> UInt64 {
+    open func seekToEndOfFile() -> UInt64 {
         return UInt64(lseek(_fd, 0, L_XTND))
     }
     
-    public func seek(toFileOffset offset: UInt64) {
+    open func seek(toFileOffset offset: UInt64) {
         lseek(_fd, off_t(offset), L_SET)
     }
     
-    public func truncateFile(atOffset offset: UInt64) {
+    open func truncateFile(atOffset offset: UInt64) {
         if lseek(_fd, off_t(offset), L_SET) == 0 {
             ftruncate(_fd, off_t(offset))
         }
     }
     
-    public func synchronizeFile() {
+    open func synchronizeFile() {
         fsync(_fd)
     }
     
-    public func closeFile() {
+    open func closeFile() {
         if !_closed {
             close(_fd)
             _closed = true
@@ -179,11 +180,11 @@ public class FileHandle: NSObject, NSSecureCoding {
         NSUnimplemented()
     }
     
-    public func encode(with aCoder: NSCoder) {
+    open func encode(with aCoder: NSCoder) {
         NSUnimplemented()
     }
     
-    public static func supportsSecureCoding() -> Bool {
+    public static var supportsSecureCoding: Bool {
         return true
     }
 }
@@ -194,7 +195,7 @@ extension FileHandle {
         return FileHandle(fileDescriptor: STDIN_FILENO, closeOnDealloc: false)
     }()
 
-    public class func standardInput() -> FileHandle {
+    open class var standardInput: FileHandle {
         return _stdinFileHandle
     }
     
@@ -202,7 +203,7 @@ extension FileHandle {
         return FileHandle(fileDescriptor: STDOUT_FILENO, closeOnDealloc: false)
     }()
 
-    public class func standardOutput() -> FileHandle {
+    open class var standardOutput: FileHandle {
         return _stdoutFileHandle
     }
     
@@ -210,11 +211,11 @@ extension FileHandle {
         return FileHandle(fileDescriptor: STDERR_FILENO, closeOnDealloc: false)
     }()
     
-    public class func standardError() -> FileHandle {
+    open class var standardError: FileHandle {
         return _stderrFileHandle
     }
     
-    public class func nullDevice() -> FileHandle {
+    open class var nullDevice: FileHandle {
         NSUnimplemented()
     }
     
@@ -231,15 +232,12 @@ extension FileHandle {
     }
     
     internal static func _openFileDescriptorForURL(_ url : URL, flags: Int32, reading: Bool) throws -> Int32 {
-        if let path = url.path {
-            let fd = _CFOpenFile(path, flags)
-            if fd < 0 {
-                throw _NSErrorWithErrno(errno, reading: reading, url: url)
-            }
-            return fd
-        } else {
-            throw _NSErrorWithErrno(ENOENT, reading: reading, url: url)
+        let path = url.path
+        let fd = _CFOpenFile(path, flags)
+        if fd < 0 {
+            throw _NSErrorWithErrno(errno, reading: reading, url: url)
         }
+        return fd
     }
     
     public convenience init(forReadingFrom url: URL) throws {
@@ -258,82 +256,79 @@ extension FileHandle {
     }
 }
 
-public let NSFileHandleOperationException: String = "" // NSUnimplemented
+extension NSExceptionName {
+    public static let fileHandleOperationException = "" // NSUnimplemented
+}
 
-public let NSFileHandleReadCompletionNotification: String = "" // NSUnimplemented
-public let NSFileHandleReadToEndOfFileCompletionNotification: String = "" // NSUnimplemented
-public let NSFileHandleConnectionAcceptedNotification: String = "" // NSUnimplemented
-public let NSFileHandleDataAvailableNotification: String = "" // NSUnimplemented
+extension Notification.Name {
+    public static let NSFileHandleReadToEndOfFileCompletion = Notification.Name(rawValue: "") // NSUnimplemented
+    public static let NSFileHandleConnectionAccepted = Notification.Name(rawValue: "") // NSUnimplemented
+    public static let NSFileHandleDataAvailable = Notification.Name(rawValue: "") // NSUnimplemented
+    public static let NSFileHandleReadCompletion = Notification.Name(rawValue: "") // NSUnimplemented
+}
 
 public let NSFileHandleNotificationDataItem: String = "" // NSUnimplemented
 public let NSFileHandleNotificationFileHandleItem: String = "" // NSUnimplemented
 
 extension FileHandle {
-    
-    public func readInBackgroundAndNotify(forModes modes: [String]?) {
+    open func readInBackgroundAndNotify(forModes modes: [RunLoopMode]?) {
         NSUnimplemented()
     }
 
-    public func readInBackgroundAndNotify() {
+    open func readInBackgroundAndNotify() {
         NSUnimplemented()
     }
 
-    
-    public func readToEndOfFileInBackgroundAndNotify(forModes modes: [String]?) {
+    open func readToEndOfFileInBackgroundAndNotify(forModes modes: [RunLoopMode]?) {
         NSUnimplemented()
     }
 
-    public func readToEndOfFileInBackgroundAndNotify() {
-        NSUnimplemented()
-    }
-
-    
-    public func acceptConnectionInBackgroundAndNotify(forModes modes: [String]?) {
-        NSUnimplemented()
-    }
-
-    public func acceptConnectionInBackgroundAndNotify() {
-        NSUnimplemented()
-    }
-
-    
-    public func waitForDataInBackgroundAndNotify(forModes modes: [String]?) {
-        NSUnimplemented()
-    }
-
-    public func waitForDataInBackgroundAndNotify() {
+    open func readToEndOfFileInBackgroundAndNotify() {
         NSUnimplemented()
     }
     
-    public var readabilityHandler: ((FileHandle) -> Void)? {
+    open func acceptConnectionInBackgroundAndNotify(forModes modes: [RunLoopMode]?) {
         NSUnimplemented()
     }
 
-    public var writeabilityHandler: ((FileHandle) -> Void)? {
+    open func acceptConnectionInBackgroundAndNotify() {
+        NSUnimplemented()
+    }
+    
+    open func waitForDataInBackgroundAndNotify(forModes modes: [RunLoopMode]?) {
         NSUnimplemented()
     }
 
+    open func waitForDataInBackgroundAndNotify() {
+        NSUnimplemented()
+    }
+    
+    open var readabilityHandler: ((FileHandle) -> Void)? {
+        NSUnimplemented()
+    }
+
+    open var writeabilityHandler: ((FileHandle) -> Void)? {
+        NSUnimplemented()
+    }
 }
 
 extension FileHandle {
-    
     public convenience init(fileDescriptor fd: Int32) {
         self.init(fileDescriptor: fd, closeOnDealloc: false)
     }
     
-    public var fileDescriptor: Int32 {
+    open var fileDescriptor: Int32 {
         return _fd
     }
 }
 
-public class Pipe: NSObject {
-    
+open class Pipe: NSObject {
     private let readHandle: FileHandle
     private let writeHandle: FileHandle
     
     public override init() {
         /// the `pipe` system call creates two `fd` in a malloc'ed area
-        var fds = UnsafeMutablePointer<Int32>(allocatingCapacity: 2)
+        var fds = UnsafeMutablePointer<Int32>.allocate(capacity: 2)
         defer {
             free(fds)
         }
@@ -352,11 +347,11 @@ public class Pipe: NSObject {
         super.init()
     }
     
-    public var fileHandleForReading: FileHandle {
+    open var fileHandleForReading: FileHandle {
         return self.readHandle
     }
     
-    public var fileHandleForWriting: FileHandle {
+    open var fileHandleForWriting: FileHandle {
         return self.writeHandle
     }
 }

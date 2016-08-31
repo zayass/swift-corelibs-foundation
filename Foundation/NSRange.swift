@@ -38,35 +38,36 @@ extension CFRange {
 public typealias NSRange = _NSRange
 
 extension NSRange {
-    public init(_ x: CountableRange<Int>) {
-        location = x.startIndex
+    public init(_ x: Range<Int>) {
+        location = x.lowerBound
         length = x.count
     }
     
-    public func toRange() -> CountableRange<Int>? {
+    public func toRange() -> Range<Int>? {
         if location == NSNotFound { return nil }
-        let min = location
-        let max = location + length
-        return min..<max
+        return location..<(location+length)
+    }
+    
+    internal func toCountableRange() -> CountableRange<Int>? {
+        if location == NSNotFound { return nil }
+        return location..<(location+length)
     }
 }
 
 extension NSRange: NSSpecialValueCoding {
-    init(bytes: UnsafePointer<Void>) {
-        let buffer = UnsafePointer<Int>(bytes)
-        
-        self.location = buffer.pointee
-        self.length = buffer.advanced(by: 1).pointee
+    init(bytes: UnsafeRawPointer) {
+        self.location = bytes.load(as: Int.self)
+        self.length = bytes.load(fromByteOffset: MemoryLayout<Int>.stride, as: Int.self)
     }
     
     init?(coder aDecoder: NSCoder) {
         if aDecoder.allowsKeyedCoding {
-            if let location = aDecoder.decodeObjectOfClass(NSNumber.self, forKey: "NS.rangeval.location") {
+            if let location = aDecoder.decodeObject(of: NSNumber.self, forKey: "NS.rangeval.location") {
                 self.location = location.intValue
             } else {
                 self.location = 0
             }
-            if let length = aDecoder.decodeObjectOfClass(NSNumber.self, forKey: "NS.rangeval.length") {
+            if let length = aDecoder.decodeObject(of: NSNumber.self, forKey: "NS.rangeval.length") {
                 self.length = length.intValue
             } else {
                 self.length = 0
@@ -95,8 +96,8 @@ extension NSRange: NSSpecialValueCoding {
 #endif
     }
     
-    func getValue(_ value: UnsafeMutablePointer<Void>) {
-        UnsafeMutablePointer<NSRange>(value).pointee = self
+    func getValue(_ value: UnsafeMutableRawPointer) {
+        value.initializeMemory(as: NSRange.self, to: self)
     }
     
     func isEqual(_ aValue: Any) -> Bool {

@@ -36,7 +36,7 @@ class TestNSBundle : XCTestCase {
     }
     
     func test_paths() {
-        let bundle = Bundle.main()
+        let bundle = Bundle.main
         
         // bundlePath
         XCTAssert(!bundle.bundlePath.isEmpty)
@@ -52,32 +52,32 @@ class TestNSBundle : XCTestCase {
         XCTAssertEqual("\(path)/Contents/SharedSupport", bundle.sharedSupportPath)
         #endif
         
-        XCTAssertNil(bundle.pathForAuxiliaryExecutable("no_such_file"))
+        XCTAssertNil(bundle.path(forAuxiliaryExecutable: "no_such_file"))
         XCTAssertNil(bundle.appStoreReceiptURL)
     }
     
     func test_resources() {
-        let bundle = Bundle.main()
+        let bundle = Bundle.main
         
         // bad resources
-        XCTAssertNil(bundle.urlForResource(nil, withExtension: nil, subdirectory: nil))
-        XCTAssertNil(bundle.urlForResource("", withExtension: "", subdirectory: nil))
-        XCTAssertNil(bundle.urlForResource("no_such_file", withExtension: nil, subdirectory: nil))
+        XCTAssertNil(bundle.url(forResource: nil, withExtension: nil, subdirectory: nil))
+        XCTAssertNil(bundle.url(forResource: "", withExtension: "", subdirectory: nil))
+        XCTAssertNil(bundle.url(forResource: "no_such_file", withExtension: nil, subdirectory: nil))
         
         // test file
-        let testPlist = bundle.urlForResource("Test", withExtension: "plist")
+        let testPlist = bundle.url(forResource: "Test", withExtension: "plist")
         XCTAssertNotNil(testPlist)
         XCTAssertEqual("Test.plist", testPlist!.lastPathComponent)
-        XCTAssert(FileManager.default().fileExists(atPath: testPlist!.path!))
+        XCTAssert(FileManager.default.fileExists(atPath: testPlist!.path))
         
         // aliases, paths
-        XCTAssertEqual(testPlist!.path, bundle.urlForResource("Test", withExtension: "plist", subdirectory: nil)!.path)
-        XCTAssertEqual(testPlist!.path, bundle.pathForResource("Test", ofType: "plist"))
-        XCTAssertEqual(testPlist!.path, bundle.pathForResource("Test", ofType: "plist", inDirectory: nil))
+        XCTAssertEqual(testPlist!.path, bundle.url(forResource: "Test", withExtension: "plist", subdirectory: nil)!.path)
+        XCTAssertEqual(testPlist!.path, bundle.path(forResource: "Test", ofType: "plist"))
+        XCTAssertEqual(testPlist!.path, bundle.path(forResource: "Test", ofType: "plist", inDirectory: nil))
     }
     
     func test_infoPlist() {
-        let bundle = Bundle.main()
+        let bundle = Bundle.main
         
         // bundleIdentifier
         XCTAssertEqual("org.swift.TestFoundation", bundle.bundleIdentifier)
@@ -93,7 +93,7 @@ class TestNSBundle : XCTestCase {
     }
     
     func test_localizations() {
-        let bundle = Bundle.main()
+        let bundle = Bundle.main
         
         XCTAssertEqual(["en"], bundle.localizations)
         XCTAssertEqual(["en"], bundle.preferredLocalizations)
@@ -108,23 +108,23 @@ class TestNSBundle : XCTestCase {
     
     private func _setupPlayground() -> String? {
         // Make sure the directory is uniquely named
-        let tempDir = "/tmp/TestFoundation_Playground_" + NSUUID().UUIDString + "/"
+        let tempDir = "/tmp/TestFoundation_Playground_" + NSUUID().uuidString + "/"
         
         do {
-            try FileManager.default().createDirectory(atPath: tempDir, withIntermediateDirectories: false, attributes: nil)
+            try FileManager.default.createDirectory(atPath: tempDir, withIntermediateDirectories: false, attributes: nil)
             
             // Make a flat bundle in the playground
             let bundlePath = tempDir + _bundleName
-            try FileManager.default().createDirectory(atPath: bundlePath, withIntermediateDirectories: false, attributes: nil)
+            try FileManager.default.createDirectory(atPath: bundlePath, withIntermediateDirectories: false, attributes: nil)
             
             // Put some resources in the bundle
             for n in _bundleResourceNames {
-                let _ = FileManager.default().createFile(atPath: bundlePath + "/" + n, contents: nil, attributes: nil)
+                let _ = FileManager.default.createFile(atPath: bundlePath + "/" + n, contents: nil, attributes: nil)
             }
             // Add a resource into a subdirectory
             let subDirPath = bundlePath + "/" + _subDirectory
-            try FileManager.default().createDirectory(atPath: subDirPath, withIntermediateDirectories: false, attributes: nil)
-            let _ = FileManager.default().createFile(atPath: subDirPath + "/" + _main + "." + _type, contents: nil, attributes: nil)
+            try FileManager.default.createDirectory(atPath: subDirPath, withIntermediateDirectories: false, attributes: nil)
+            let _ = FileManager.default.createFile(atPath: subDirPath + "/" + _main + "." + _type, contents: nil, attributes: nil)
         } catch _ {
             return nil
         }
@@ -135,7 +135,7 @@ class TestNSBundle : XCTestCase {
     
     private func _cleanupPlayground(_ location: String) {
         do {
-            try FileManager.default().removeItem(atPath: location)
+            try FileManager.default.removeItem(atPath: location)
         } catch _ {
             // Oh well
         }
@@ -147,24 +147,24 @@ class TestNSBundle : XCTestCase {
         let bundle = Bundle(path: playground + _bundleName)
         XCTAssertNotNil(bundle)
         
-        let worldResources = bundle?.urlsForResources(withExtension: "world", subdirectory: nil)
+        let worldResources = bundle?.urls(forResourcesWithExtension: "world", subdirectory: nil)
         XCTAssertNotNil(worldResources)
         XCTAssertEqual(worldResources?.count, 2)
         
-        let path = bundle?.pathForResource(_main, ofType: _type, inDirectory: _subDirectory)
+        let path = bundle?.path(forResource: _main, ofType: _type, inDirectory: _subDirectory)
         XCTAssertNotNil(path)
         
         _cleanupPlayground(playground)
     }
     
     func test_bundleLoad(){
-        let bundle = Bundle.main()
+        let bundle = Bundle.main
         let _ = bundle.load()
         XCTAssertTrue(bundle.isLoaded)
     }
     
     func test_bundleLoadWithError(){
-        let bundleValid = Bundle.main()
+        let bundleValid = Bundle.main
         //test valid load using loadAndReturnError
         do{
             try bundleValid.loadAndReturnError()
@@ -184,7 +184,7 @@ class TestNSBundle : XCTestCase {
     }
     
     func test_bundlePreflight(){
-        let bundleValid = Bundle.main()
+        let bundleValid = Bundle.main
         do{
             try bundleValid.preflight()
         }catch{

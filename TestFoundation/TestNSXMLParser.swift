@@ -26,9 +26,11 @@ class TestNSXMLParser : XCTestCase {
     }
     
     func test_data() {
-        let xml = Array("<test><foo>bar</foo></test>".nulTerminatedUTF8)
-        let data = xml.withUnsafeBufferPointer { (buffer: UnsafeBufferPointer<UInt8>) -> Data in
-            return Data(bytes:UnsafePointer<Void>(buffer.baseAddress!), count: buffer.count)
+        let xml = Array("<test><foo>bar</foo></test>".utf8CString)
+        let data = xml.withUnsafeBufferPointer { (buffer: UnsafeBufferPointer<CChar>) -> Data in
+            return buffer.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: buffer.count * MemoryLayout<CChar>.stride) {
+                return Data(bytes: $0, count: buffer.count)
+            }
         }
         let parser = XMLParser(data: data)
         let res = parser.parse()

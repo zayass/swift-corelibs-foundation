@@ -16,7 +16,7 @@ import SwiftXCTest
 #endif
 
 internal func testBundle() -> Bundle {
-    return Bundle.main()
+    return Bundle.main
 }
 
 // For the Swift version of the Foundation tests, we must manually list all test cases here.
@@ -68,8 +68,10 @@ XCTMain([
     testCase(TestNSURLComponents.allTests),
     testCase(TestNSURLCredential.allTests),
     testCase(TestNSURLRequest.allTests),
+    testCase(TestURLRequest.allTests),
     testCase(TestNSURLResponse.allTests),
     testCase(TestNSHTTPURLResponse.allTests),
+    testCase(TestURLSession.allTests),
     testCase(TestNSNull.allTests),
     testCase(TestNSUUID.allTests),
     testCase(TestNSValue.allTests),

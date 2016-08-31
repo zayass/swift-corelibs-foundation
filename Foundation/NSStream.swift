@@ -32,6 +32,14 @@ extension Stream {
         public var hashValue: Int {
             return rawValue.hashValue
         }
+        
+        public static func ==(lhs: Stream.PropertyKey, rhs: Stream.PropertyKey) -> Bool {
+            return lhs.rawValue == rhs.rawValue
+        }
+        
+        public static func <(lhs: Stream.PropertyKey, rhs: Stream.PropertyKey) -> Bool {
+            return lhs.rawValue < rhs.rawValue
+        }
     }
     
     public enum Status : UInt {
@@ -50,6 +58,7 @@ extension Stream {
         public let rawValue : UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
+        // NOTE: on darwin these are vars
         public static let openCompleted = Event(rawValue: 1 << 0)
         public static let hasBytesAvailable = Event(rawValue: 1 << 1)
         public static let hasSpaceAvailable = Event(rawValue: 1 << 2)
@@ -58,79 +67,72 @@ extension Stream {
     }
 }
 
-public func ==(lhs: Stream.PropertyKey, rhs: Stream.PropertyKey) -> Bool {
-    return lhs.rawValue == rhs.rawValue
-}
-
-public func <(lhs: Stream.PropertyKey, rhs: Stream.PropertyKey) -> Bool {
-    return lhs.rawValue < rhs.rawValue
-}
 
 
-// NSStream is an abstract class encapsulating the common API to NSInputStream and NSOutputStream.
-// Subclassers of NSInputStream and NSOutputStream must also implement these methods.
-public class Stream: NSObject {
+// NSStream is an abstract class encapsulating the common API to InputStream and OutputStream.
+// Subclassers of InputStream and OutputStream must also implement these methods.
+open class Stream: NSObject {
 
     public override init() {
 
     }
     
-    public func open() {
+    open func open() {
         NSRequiresConcreteImplementation()
     }
     
-    public func close() {
+    open func close() {
         NSRequiresConcreteImplementation()
     }
     
-    public weak var delegate: StreamDelegate?
-    // By default, a stream is its own delegate, and subclassers of NSInputStream and NSOutputStream must maintain this contract. [someStream setDelegate:nil] must restore this behavior. As usual, delegates are not retained.
+    open weak var delegate: StreamDelegate?
+    // By default, a stream is its own delegate, and subclassers of InputStream and OutputStream must maintain this contract. [someStream setDelegate:nil] must restore this behavior. As usual, delegates are not retained.
     
-    public func propertyForKey(_ key: String) -> AnyObject? {
+    open func property(forKey key: PropertyKey) -> AnyObject? {
         NSUnimplemented()
     }
     
-    public func setProperty(_ property: AnyObject?, forKey key: String) -> Bool {
+    open func setProperty(_ property: AnyObject?, forKey key: PropertyKey) -> Bool {
         NSUnimplemented()
     }
 
 // Re-enable once run loop is compiled on all platforms
 
-    public func schedule(in aRunLoop: RunLoop, forMode mode: RunLoopMode) {
+    open func schedule(in aRunLoop: RunLoop, forMode mode: RunLoopMode) {
         NSUnimplemented()
     }
     
-    public func remove(from aRunLoop: RunLoop, forMode mode: RunLoopMode) {
+    open func remove(from aRunLoop: RunLoop, forMode mode: RunLoopMode) {
         NSUnimplemented()
     }
     
-    public var streamStatus: Status {
+    open var streamStatus: Status {
         NSRequiresConcreteImplementation()
     }
     
-    /*@NSCopying */public var streamError: NSError? {
+    open var streamError: NSError? {
         NSUnimplemented()
     }
 }
 
-// NSInputStream is an abstract class representing the base functionality of a read stream.
+// InputStream is an abstract class representing the base functionality of a read stream.
 // Subclassers are required to implement these methods.
-public class InputStream: Stream {
+open class InputStream: Stream {
 
     private var _stream: CFReadStream!
 
     // reads up to length bytes into the supplied buffer, which must be at least of size len. Returns the actual number of bytes read.
-    public func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
-        return CFReadStreamRead(_stream, buffer, CFIndex(len._bridgeToObject()))
+    open func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
+        return CFReadStreamRead(_stream, buffer, CFIndex(len._bridgeToObjectiveC()))
     }
     
     // returns in O(1) a pointer to the buffer in 'buffer' and by reference in 'len' how many bytes are available. This buffer is only valid until the next stream operation. Subclassers may return NO for this if it is not appropriate for the stream type. This may return NO if the buffer is not available.
-    public func getBuffer(_ buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, length len: UnsafeMutablePointer<Int>) -> Bool {
+    open func getBuffer(_ buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, length len: UnsafeMutablePointer<Int>) -> Bool {
         NSUnimplemented()
     }
     
     // returns YES if the stream has bytes available or if it impossible to tell without actually doing the read.
-    public var hasBytesAvailable: Bool {
+    open var hasBytesAvailable: Bool {
         return CFReadStreamHasBytesAvailable(_stream)
     }
     
@@ -146,40 +148,41 @@ public class InputStream: Stream {
         self.init(url: URL(fileURLWithPath: path))
     }
 
-    public override func open() {
+    open override func open() {
         CFReadStreamOpen(_stream)
     }
     
-    public override func close() {
+    open override func close() {
         CFReadStreamClose(_stream)
     }
     
-    public override var streamStatus: Status {
+    open override var streamStatus: Status {
         return Stream.Status(rawValue: UInt(CFReadStreamGetStatus(_stream)))!
     }
 }
 
-// NSOutputStream is an abstract class representing the base functionality of a write stream.
+// OutputStream is an abstract class representing the base functionality of a write stream.
 // Subclassers are required to implement these methods.
-// Currently this is left as named NSOutputStream due to conflicts with the standard library's text streaming target protocol named OutputStream (which ideally should be renamed)
-public class NSOutputStream : Stream {
+// Currently this is left as named OutputStream due to conflicts with the standard library's text streaming target protocol named OutputStream (which ideally should be renamed)
+open class OutputStream : Stream {
     
     private  var _stream: CFWriteStream!
     
     // writes the bytes from the specified buffer to the stream up to len bytes. Returns the number of bytes actually written.
-    public func write(_ buffer: UnsafePointer<UInt8>, maxLength len: Int) -> Int {
+    open func write(_ buffer: UnsafePointer<UInt8>, maxLength len: Int) -> Int {
         return  CFWriteStreamWrite(_stream, buffer, len)
     }
     
     // returns YES if the stream can be written to or if it is impossible to tell without actually doing the write.
-    public var hasSpaceAvailable: Bool {
+    open var hasSpaceAvailable: Bool {
         return CFWriteStreamCanAcceptBytes(_stream)
     }
-    
+    // NOTE: on Darwin this is     'open class func toMemory() -> Self'
     required public init(toMemory: ()) {
         _stream = CFWriteStreamCreateWithAllocatedBuffers(kCFAllocatorDefault, kCFAllocatorDefault)
     }
 
+    // TODO: this should use the real buffer API
     public init(toBuffer buffer: UnsafeMutablePointer<UInt8>, capacity: Int) {
         _stream = CFWriteStreamCreateWithBuffer(kCFAllocatorSystemDefault, buffer, capacity)
     }
@@ -193,41 +196,41 @@ public class NSOutputStream : Stream {
         self.init(url: URL(fileURLWithPath: path), append: shouldAppend)
     }
     
-    public override func open() {
+    open override func open() {
         CFWriteStreamOpen(_stream)
     }
     
-    public override func close() {
+    open override func close() {
         CFWriteStreamClose(_stream)
     }
     
-    public override var streamStatus: Status {
+    open override var streamStatus: Status {
         return Stream.Status(rawValue: UInt(CFWriteStreamGetStatus(_stream)))!
     }
     
-    public class func outputStreamToMemory() -> Self {
+    open class func outputStreamToMemory() -> Self {
         return self.init(toMemory: ())
     }
     
-    public override func propertyForKey(_ key: String) -> AnyObject? {
-        return CFWriteStreamCopyProperty(_stream, key._cfObject)
+    open override func property(forKey key: PropertyKey) -> AnyObject? {
+        return CFWriteStreamCopyProperty(_stream, key.rawValue._cfObject)
     }
     
-    public  override func setProperty(_ property: AnyObject?, forKey key: String) -> Bool {
-        return CFWriteStreamSetProperty(_stream, key._cfObject, property)
+    open  override func setProperty(_ property: AnyObject?, forKey key: PropertyKey) -> Bool {
+        return CFWriteStreamSetProperty(_stream, key.rawValue._cfObject, property)
     }
 }
 
 // Discussion of this API is ongoing for its usage of AutoreleasingUnsafeMutablePointer
 #if false
 extension Stream {
-    public class func getStreamsToHost(withName hostname: String, port: Int, inputStream: AutoreleasingUnsafeMutablePointer<InputStream?>?, outputStream: AutoreleasingUnsafeMutablePointer<NSOutputStream?>?) {
+    open class func getStreamsToHost(withName hostname: String, port: Int, inputStream: AutoreleasingUnsafeMutablePointer<InputStream?>?, outputStream: AutoreleasingUnsafeMutablePointer<OutputStream?>?) {
         NSUnimplemented()
     }
 }
 
 extension Stream {
-    public class func getBoundStreams(withBufferSize bufferSize: Int, inputStream: AutoreleasingUnsafeMutablePointer<InputStream?>?, outputStream: AutoreleasingUnsafeMutablePointer<NSOutputStream?>?) {
+    open class func getBoundStreams(withBufferSize bufferSize: Int, inputStream: AutoreleasingUnsafeMutablePointer<InputStream?>?, outputStream: AutoreleasingUnsafeMutablePointer<OutputStream?>?) {
         NSUnimplemented()
     }
 }
@@ -241,56 +244,116 @@ public protocol StreamDelegate : class {
     func stream(_ aStream: Stream, handleEvent eventCode: Stream.Event)
 }
 
-// NSString constants for the propertyForKey/setProperty:forKey: API
-// String constants for the setting of the socket security level.
-// use this as the key for setting one of the following values for the security level of the target stream.
-public let NSStreamSocketSecurityLevelKey: String = "kCFStreamPropertySocketSecurityLevel"
+// MARK: -
+extension Stream.PropertyKey {
+    public static let socketSecurityLevelKey = Stream.PropertyKey(rawValue: "kCFStreamPropertySocketSecurityLevel")
+    public static let socksProxyConfigurationKey = Stream.PropertyKey(rawValue: "kCFStreamPropertySOCKSProxy")
+    public static let dataWrittenToMemoryStreamKey = Stream.PropertyKey(rawValue: "kCFStreamPropertyDataWritten")    public static let fileCurrentOffsetKey = Stream.PropertyKey(rawValue: "kCFStreamPropertyFileCurrentOffset")
+    public static let networkServiceType = Stream.PropertyKey(rawValue: "kCFStreamNetworkServiceType")
+}
 
-public let NSStreamSocketSecurityLevelNone: String = "kCFStreamSocketSecurityLevelNone"
-public let NSStreamSocketSecurityLevelSSLv2: String = "NSStreamSocketSecurityLevelSSLv2"
-public let NSStreamSocketSecurityLevelSSLv3: String = "NSStreamSocketSecurityLevelSSLv3"
-public let NSStreamSocketSecurityLevelTLSv1: String = "kCFStreamSocketSecurityLevelTLSv1"
-public let NSStreamSocketSecurityLevelNegotiatedSSL: String = "kCFStreamSocketSecurityLevelNegotiatedSSL"
+// MARK: -
+public struct StreamSocketSecurityLevel : RawRepresentable, Equatable, Hashable, Comparable {
+    public let rawValue: String
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+    public var hashValue: Int {
+        return rawValue.hashValue
+    }
+    public static func ==(lhs: StreamSocketSecurityLevel, rhs: StreamSocketSecurityLevel) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
+    public static func <(lhs: StreamSocketSecurityLevel, rhs: StreamSocketSecurityLevel) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+extension StreamSocketSecurityLevel {
+    public static let none = StreamSocketSecurityLevel(rawValue: "kCFStreamSocketSecurityLevelNone")
+    public static let ssLv2 = StreamSocketSecurityLevel(rawValue: "NSStreamSocketSecurityLevelSSLv2")
+    public static let ssLv3 = StreamSocketSecurityLevel(rawValue: "NSStreamSocketSecurityLevelSSLv3")
+    public static let tlSv1 = StreamSocketSecurityLevel(rawValue: "kCFStreamSocketSecurityLevelTLSv1")
+    public static let negotiatedSSL = StreamSocketSecurityLevel(rawValue: "kCFStreamSocketSecurityLevelNegotiatedSSL")
+}
 
-public let NSStreamSOCKSProxyConfigurationKey: String  = "kCFStreamPropertySOCKSProxy"
-// Value is an NSDictionary containing the key/value pairs below. The dictionary returned from SystemConfiguration for SOCKS proxies will work without alteration.
 
-public let NSStreamSOCKSProxyHostKey: String = "NSStreamSOCKSProxyKey"
-// Value is an NSString
-public let NSStreamSOCKSProxyPortKey: String = "NSStreamSOCKSPortKey"
-// Value is an NSNumber
-public let NSStreamSOCKSProxyVersionKey: String = "kCFStreamPropertySOCKSVersion"
-// Value is one of NSStreamSOCKSProxyVersion4 or NSStreamSOCKSProxyVersion5
-public let NSStreamSOCKSProxyUserKey: String = "kCFStreamPropertySOCKSUser"
-// Value is an NSString
-public let NSStreamSOCKSProxyPasswordKey: String = "kCFStreamPropertySOCKSPassword"
-// Value is an NSString
+// MARK: -
+public struct StreamSOCKSProxyConfiguration : RawRepresentable, Equatable, Hashable, Comparable {
+    public let rawValue: String
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+    public var hashValue: Int {
+        return rawValue.hashValue
+    }
+    public static func ==(lhs: StreamSOCKSProxyConfiguration, rhs: StreamSOCKSProxyConfiguration) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
+    public static func <(lhs: StreamSOCKSProxyConfiguration, rhs: StreamSOCKSProxyConfiguration) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+extension StreamSOCKSProxyConfiguration {
+    public static let hostKey = StreamSOCKSProxyConfiguration(rawValue: "NSStreamSOCKSProxyKey")
+    public static let portKey = StreamSOCKSProxyConfiguration(rawValue: "NSStreamSOCKSPortKey")
+    public static let versionKey = StreamSOCKSProxyConfiguration(rawValue: "kCFStreamPropertySOCKSVersion")
+    public static let userKey = StreamSOCKSProxyConfiguration(rawValue: "kCFStreamPropertySOCKSUser")
+    public static let passwordKey = StreamSOCKSProxyConfiguration(rawValue: "kCFStreamPropertySOCKSPassword")
+}
 
-public let NSStreamSOCKSProxyVersion4: String = "kCFStreamSocketSOCKSVersion4"
-// Value for NSStreamSOCKProxyVersionKey
-public let NSStreamSOCKSProxyVersion5: String = "kCFStreamSocketSOCKSVersion5"
-// Value for NSStreamSOCKProxyVersionKey
 
-public let NSStreamDataWrittenToMemoryStreamKey: String = "kCFStreamPropertyDataWritten"
-// Key for obtaining the data written to a memory stream.
+// MARK: -
+public struct StreamSOCKSProxyVersion : RawRepresentable, Equatable, Hashable, Comparable {
+    public let rawValue: String
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+    public var hashValue: Int {
+        return rawValue.hashValue
+    }
+    public static func ==(lhs: StreamSOCKSProxyVersion, rhs: StreamSOCKSProxyVersion) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
+    public static func <(lhs: StreamSOCKSProxyVersion, rhs: StreamSOCKSProxyVersion) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+extension StreamSOCKSProxyVersion {
+    public static let version4 = StreamSOCKSProxyVersion(rawValue: "kCFStreamSocketSOCKSVersion4")
+    public static let version5 = StreamSOCKSProxyVersion(rawValue: "kCFStreamSocketSOCKSVersion5")
+}
 
-public let NSStreamFileCurrentOffsetKey: String = "kCFStreamPropertyFileCurrentOffset"
-// Value is an NSNumber representing the current absolute offset of the stream.
 
+// MARK: - Supported network service types
+public struct StreamNetworkServiceTypeValue : RawRepresentable, Equatable, Hashable, Comparable {
+    public let rawValue: String
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+    public var hashValue: Int {
+        return rawValue.hashValue
+    }
+    public static func ==(lhs: StreamNetworkServiceTypeValue, rhs: StreamNetworkServiceTypeValue) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
+    public static func <(lhs: StreamNetworkServiceTypeValue, rhs: StreamNetworkServiceTypeValue) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+extension StreamNetworkServiceTypeValue {
+    public static let voIP = StreamNetworkServiceTypeValue(rawValue: "kCFStreamNetworkServiceTypeVoIP")
+    public static let video = StreamNetworkServiceTypeValue(rawValue: "kCFStreamNetworkServiceTypeVideo")
+    public static let background = StreamNetworkServiceTypeValue(rawValue: "kCFStreamNetworkServiceTypeBackground")
+    public static let voice = StreamNetworkServiceTypeValue(rawValue: "kCFStreamNetworkServiceTypeVoice")
+    public static let callSignaling = StreamNetworkServiceTypeValue(rawValue: "kCFStreamNetworkServiceTypeVoice")
+}
+
+
+
+
+// MARK: - Error Domains
 // NSString constants for error domains.
 public let NSStreamSocketSSLErrorDomain: String = "NSStreamSocketSSLErrorDomain"
 // SSL errors are to be interpreted via <Security/SecureTransport.h>
 public let NSStreamSOCKSErrorDomain: String = "NSStreamSOCKSErrorDomain"
-
-// Property key to specify the type of service for the stream.  This
-// allows the system to properly handle the request with respect to
-// routing, suspension behavior and other networking related attributes
-// appropriate for the given service type.  The service types supported
-// are documented below.
-public let NSStreamNetworkServiceType: String = "kCFStreamNetworkServiceType"
-// Supported network service types:
-public let NSStreamNetworkServiceTypeVoIP: String = "kCFStreamNetworkServiceTypeVoIP"
-public let NSStreamNetworkServiceTypeVideo: String = "kCFStreamNetworkServiceTypeVideo"
-public let NSStreamNetworkServiceTypeBackground: String = "kCFStreamNetworkServiceTypeBackground"
-public let NSStreamNetworkServiceTypeVoice: String = "kCFStreamNetworkServiceTypeVoice"
 
