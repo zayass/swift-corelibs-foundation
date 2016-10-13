@@ -14,8 +14,14 @@ import CoreFoundation
 // This mimics the behavior of the swift sdk overlay on Darwin
 #if os(OSX) || os(iOS)
 @_exported import Darwin
-#elseif os(Linux)
+#elseif os(Linux) || os(Android) || CYGWIN
 @_exported import Glibc
+#endif
+
+#if os(Android) // shim required for bzero
+@_transparent func bzero(_ ptr: UnsafeMutableRawPointer, _ size: size_t) {
+    memset(ptr, 0, size)
+}
 #endif
 
 public typealias ObjCBool = Bool
@@ -91,7 +97,7 @@ internal func __CFInitializeSwift() {
     _CFRuntimeBridgeTypeToClass(_CFKeyedArchiverUIDGetTypeID(), unsafeBitCast(_NSKeyedArchiverUID.self, to: UnsafeRawPointer.self))
     
 //    _CFRuntimeBridgeTypeToClass(CFErrorGetTypeID(), unsafeBitCast(NSError.self, UnsafeRawPointer.self))
-//    _CFRuntimeBridgeTypeToClass(CFAttributedStringGetTypeID(), unsafeBitCast(NSMutableAttributedString.self, UnsafeRawPointer.self))
+    _CFRuntimeBridgeTypeToClass(CFAttributedStringGetTypeID(), unsafeBitCast(NSMutableAttributedString.self, to: UnsafeRawPointer.self))
 //    _CFRuntimeBridgeTypeToClass(CFReadStreamGetTypeID(), unsafeBitCast(InputStream.self, UnsafeRawPointer.self))
 //    _CFRuntimeBridgeTypeToClass(CFWriteStreamGetTypeID(), unsafeBitCast(OutputStream.self, UnsafeRawPointer.self))
    _CFRuntimeBridgeTypeToClass(CFRunLoopTimerGetTypeID(), unsafeBitCast(Timer.self, to: UnsafeRawPointer.self))
@@ -100,6 +106,19 @@ internal func __CFInitializeSwift() {
     __CFSwiftBridge.NSObject.hash = _CFSwiftGetHash
     __CFSwiftBridge.NSObject._cfTypeID = _CFSwiftGetTypeID
     
+    __CFSwiftBridge.NSSet.count = _CFSwiftSetGetCount
+    __CFSwiftBridge.NSSet.countForValue = _CFSwiftSetGetCountOfValue
+    __CFSwiftBridge.NSSet.containsValue = _CFSwiftSetContainsValue
+    __CFSwiftBridge.NSSet.getValue = _CFSwiftSetGetValue
+    __CFSwiftBridge.NSSet.getValueIfPresent = _CFSwiftSetGetValueIfPresent
+    __CFSwiftBridge.NSSet.getValues = _CFSwiftSetGetValues
+    __CFSwiftBridge.NSSet.copy = _CFSwiftSetCreateCopy
+    
+    __CFSwiftBridge.NSMutableSet.addValue = _CFSwiftSetAddValue
+    __CFSwiftBridge.NSMutableSet.replaceValue = _CFSwiftSetReplaceValue
+    __CFSwiftBridge.NSMutableSet.setValue = _CFSwiftSetSetValue
+    __CFSwiftBridge.NSMutableSet.removeValue = _CFSwiftSetRemoveValue
+    __CFSwiftBridge.NSMutableSet.removeAllValues = _CFSwiftSetRemoveAllValues
     
     __CFSwiftBridge.NSArray.count = _CFSwiftArrayGetCount
     __CFSwiftBridge.NSArray.objectAtIndex = _CFSwiftArrayGetValueAtIndex
@@ -123,6 +142,7 @@ internal func __CFInitializeSwift() {
     __CFSwiftBridge.NSDictionary.countForObject = _CFSwiftDictionaryGetCountOfValue
     __CFSwiftBridge.NSDictionary.getObjects = _CFSwiftDictionaryGetValuesAndKeys
     __CFSwiftBridge.NSDictionary.__apply = _CFSwiftDictionaryApplyFunction
+    __CFSwiftBridge.NSDictionary.copy = _CFSwiftDictionaryCreateCopy
     
     __CFSwiftBridge.NSMutableDictionary.__addObject = _CFSwiftDictionaryAddValue
     __CFSwiftBridge.NSMutableDictionary.replaceObject = _CFSwiftDictionaryReplaceValue

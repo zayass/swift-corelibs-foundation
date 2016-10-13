@@ -7,11 +7,12 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
+#if !os(Android) // not available
 import CoreFoundation
 
 #if os(OSX) || os(iOS)
     import Darwin
-#elseif os(Linux)
+#elseif os(Linux) || CYGWIN
     import Glibc
 #endif
 
@@ -260,10 +261,20 @@ open class Task: NSObject {
             task.processLaunchedCondition.unlock()
             
             var exitCode : Int32 = 0
+#if CYGWIN
+            let exitCodePtrWrapper = withUnsafeMutablePointer(to: &exitCode) {
+                exitCodePtr in
+                __wait_status_ptr_t(__int_ptr: exitCodePtr)
+            }
+#endif
             var waitResult : Int32 = 0
             
             repeat {
+#if CYGWIN
+                waitResult = waitpid( task.processIdentifier, exitCodePtrWrapper, 0)
+#else
                 waitResult = waitpid( task.processIdentifier, &exitCode, 0)
+#endif
             } while ( (waitResult == -1) && (errno == EINTR) )
             
             task.terminationStatus = WEXITSTATUS( exitCode )
@@ -298,7 +309,7 @@ open class Task: NSObject {
         CFRunLoopAddSource(managerThreadRunLoop?._cfRunLoop, source, kCFRunLoopDefaultMode)
 
         // file_actions
-        #if os(OSX) || os(iOS)
+        #if os(OSX) || os(iOS) || CYGWIN
             var fileActions: posix_spawn_file_actions_t? = nil
         #else
             var fileActions: posix_spawn_file_actions_t = posix_spawn_file_actions_t()
@@ -455,3 +466,4 @@ private func posix(_ code: Int32) {
     default: fatalError("POSIX command failed with error: \(code)")
     }
 }
+#endif

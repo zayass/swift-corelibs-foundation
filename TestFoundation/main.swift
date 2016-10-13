@@ -30,6 +30,7 @@ XCTMain([
     testCase(TestNSCompoundPredicate.allTests),
     testCase(TestNSData.allTests),
     testCase(TestNSDate.allTests),
+    testCase(TestNSDateComponents.allTests),
     testCase(TestNSDateFormatter.allTests),
     testCase(TestNSDictionary.allTests),
     testCase(TestNSFileManager.allTests),
@@ -82,4 +83,6 @@ XCTMain([
     testCase(TestNSMutableAttributedString.allTests),
     testCase(TestNSFileHandle.allTests),
     testCase(TestUnitConverter.allTests),
+    testCase(TestProgressFraction.allTests),
+    testCase(TestProgress.allTests),
 ])

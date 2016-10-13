@@ -53,7 +53,7 @@ extension NSCalendar {
         public static let ethiopicAmeteMihret = NSCalendar.Identifier("ethiopic")
         public static let ethiopicAmeteAlem = NSCalendar.Identifier("ethiopic-amete-alem")
         public static let hebrew = NSCalendar.Identifier("hebrew")
-        public static let ISO8601 = NSCalendar.Identifier("")
+        public static let ISO8601 = NSCalendar.Identifier("iso8601")
         public static let indian = NSCalendar.Identifier("indian")
         public static let islamic = NSCalendar.Identifier("islamic")
         public static let islamicCivil = NSCalendar.Identifier("islamic-civil")
@@ -461,7 +461,7 @@ open class NSCalendar : NSObject, NSCopying, NSSecureCoding {
         _convert(comps.weekday, type: "E", vector: &vector, compDesc: &compDesc)
         _convert(comps.weekdayOrdinal, type: "F", vector: &vector, compDesc: &compDesc)
         _convert(comps.month, type: "M", vector: &vector, compDesc: &compDesc)
-        _convert(comps.isLeapMonth, type: "L", vector: &vector, compDesc: &compDesc)
+        _convert(comps.isLeapMonth, type: "l", vector: &vector, compDesc: &compDesc)
         _convert(comps.day, type: "d", vector: &vector, compDesc: &compDesc)
         _convert(comps.hour, type: "H", vector: &vector, compDesc: &compDesc)
         _convert(comps.minute, type: "m", vector: &vector, compDesc: &compDesc)
@@ -579,7 +579,7 @@ open class NSCalendar : NSObject, NSCopying, NSSecureCoding {
     
     open func date(byAdding comps: DateComponents, to date: Date, options opts: Options = []) -> Date? {
         var (vector, compDesc) = _convert(comps)
-        var at: CFAbsoluteTime = 0.0
+        var at: CFAbsoluteTime = date.timeIntervalSinceReferenceDate
         
         let res: Bool = withUnsafeMutablePointer(to: &at) { t in
             return vector.withUnsafeMutableBufferPointer { (vectorBuffer: inout UnsafeMutableBufferPointer<Int32>) in
@@ -1428,7 +1428,27 @@ open class NSDateComponents : NSObject, NSCopying, NSSecureCoding {
     }
     
     open func copy(with zone: NSZone? = nil) -> Any {
-        NSUnimplemented()
+        let newObj = NSDateComponents()
+        newObj.calendar = calendar
+        newObj.timeZone = timeZone
+        newObj.era = era
+        newObj.year = year
+        newObj.month = month
+        newObj.day = day
+        newObj.hour = hour
+        newObj.minute = minute
+        newObj.second = second
+        newObj.nanosecond = nanosecond
+        newObj.weekOfYear = weekOfYear
+        newObj.weekOfMonth = weekOfMonth
+        newObj.yearForWeekOfYear = yearForWeekOfYear
+        newObj.weekday = weekday
+        newObj.weekdayOrdinal = weekdayOrdinal
+        newObj.quarter = quarter
+        if leapMonthSet {
+            newObj.isLeapMonth = isLeapMonth
+        }
+        return newObj
     }
     
     /*@NSCopying*/ open var calendar: Calendar? {

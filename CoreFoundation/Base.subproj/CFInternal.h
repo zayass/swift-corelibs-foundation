@@ -98,7 +98,10 @@ CF_EXTERN_C_BEGIN
 #include <CoreFoundation/CFRuntime.h>
 #include <limits.h>
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI || DEPLOYMENT_TARGET_LINUX || DEPLOYMENT_TARGET_FREEBSD
+#if TARGET_OS_CYGWIN
+#else
 #include <xlocale.h>
+#endif
 #include <unistd.h>
 #include <sys/time.h>
 #include <signal.h>
@@ -339,6 +342,16 @@ CF_PRIVATE Boolean __CFProcessIsRestricted();
 #define STACK_BUFFER_DECL(T, N, C) T N[C]
 #endif
 
+#ifdef __ANDROID__
+// Avoids crashes on Android
+// https://bugs.swift.org/browse/SR-2587
+// https://bugs.swift.org/browse/SR-2588
+// Seemed to be a linker/relocation? problem.
+// CFStrings using CONST_STRING_DECL() were not working
+// Applies reference to _NSCFConstantString's isa here
+// rather than using a linker option to create an alias.
+#define __CFConstantStringClassReference _TMC10Foundation19_NSCFConstantString
+#endif
 
 CF_EXPORT void * __CFConstantStringClassReferencePtr;
 #if defined(__CONSTANT_CFSTRINGS__)

@@ -25,6 +25,9 @@
 #if DEPLOYMENT_TARGET_WINDOWS
 #include <process.h>
 #endif
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -764,7 +767,51 @@ void CFLog(CFLogLevel lev, CFStringRef format, ...) {
 #if DEPLOYMENT_RUNTIME_SWIFT
 // Temporary as Swift cannot import varag C functions
 void CFLog1(CFLogLevel lev, CFStringRef message) {
+#ifdef __ANDROID__
+    android_LogPriority priority = ANDROID_LOG_UNKNOWN;
+    switch (lev) {
+        case kCFLogLevelEmergency: priority = ANDROID_LOG_FATAL; break;
+        case kCFLogLevelAlert:     priority = ANDROID_LOG_ERROR; break;
+        case kCFLogLevelCritical:  priority = ANDROID_LOG_ERROR; break;
+        case kCFLogLevelError:     priority = ANDROID_LOG_ERROR; break;
+        case kCFLogLevelWarning:   priority = ANDROID_LOG_WARN;  break;
+        case kCFLogLevelNotice:    priority = ANDROID_LOG_WARN;  break;
+        case kCFLogLevelInfo:      priority = ANDROID_LOG_INFO;  break;
+        case kCFLogLevelDebug:     priority = ANDROID_LOG_DEBUG; break;
+    }
+
+    if (message == NULL) message = CFSTR("NULL");
+
+    char stack_buffer[1024] = { 0 };
+    char *buffer = &stack_buffer[0];
+    CFStringEncoding encoding = kCFStringEncodingUTF8;
+    CFIndex maxLength = CFStringGetMaximumSizeForEncoding(CFStringGetLength(message), encoding) + 1;
+    const char *tag = "Swift"; // process name not available from NDK
+
+    if (maxLength > sizeof(stack_buffer) / sizeof(stack_buffer[0])) {
+        buffer = calloc(sizeof(char), maxLength);
+        if (!buffer) {
+            __android_log_print(ANDROID_LOG_ERROR, tag, "Unable to allocate %d bytes for log message - truncating.", (int)maxLength);
+            maxLength = sizeof(stack_buffer) / sizeof(stack_buffer[0]);
+            buffer = &stack_buffer[0];
+            buffer[maxLength-1] = '\000';
+        }
+    }
+
+    if (maxLength == 1) {
+        // was crashing with zero length strings
+        // https://bugs.swift.org/browse/SR-2666
+        strcpy(buffer, " "); // log empty string
+    }
+    else
+        CFStringGetCString(message, buffer, maxLength, encoding);
+
+    __android_log_print(priority, tag, "%s", buffer);
+
+    if (buffer != &stack_buffer[0]) free(buffer);
+#else
     CFLog(lev, CFSTR("%@"), message);
+#endif
 }
 #endif
 
@@ -1261,11 +1308,11 @@ CFDictionaryRef __CFGetEnvironment() {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED
         extern char ***_NSGetEnviron();
         char **envp = *_NSGetEnviron();
-#elif DEPLOYMENT_TARGET_FREEBSD
+#elif DEPLOYMENT_TARGET_FREEBSD || TARGET_OS_CYGWIN
         extern char **environ;
         char **envp = environ;
 #elif DEPLOYMENT_TARGET_LINUX
-#ifndef environ
+#if !defined(environ) && !defined(__ANDROID__)
 #define environ __environ
 #endif
         char **envp = environ;

@@ -9,7 +9,7 @@
 
 #if os(OSX) || os(iOS)
     import Darwin
-#elseif os(Linux)
+#elseif os(Linux) || CYGWIN
     import Glibc
 #endif
 
@@ -38,19 +38,17 @@ extension CGPoint: NSSpecialValueCoding {
     }
     
     init?(coder aDecoder: NSCoder) {
-        if aDecoder.allowsKeyedCoding {
-            self = aDecoder.decodePointForKey("NS.pointval")
-        } else {
-            self = aDecoder.decodePoint()
+        guard aDecoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
         }
+        self = aDecoder.decodePointForKey("NS.pointval")
     }
     
     func encodeWithCoder(_ aCoder: NSCoder) {
-        if aCoder.allowsKeyedCoding {
-            aCoder.encodePoint(self, forKey: "NS.pointval")
-        } else {
-            aCoder.encodePoint(self)
+        guard aCoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
         }
+        aCoder.encodePoint(self, forKey: "NS.pointval")
     }
     
     static func objCType() -> String {
@@ -103,19 +101,17 @@ extension CGSize: NSSpecialValueCoding {
     }
     
     init?(coder aDecoder: NSCoder) {
-        if aDecoder.allowsKeyedCoding {
-            self = aDecoder.decodeSizeForKey("NS.sizeval")
-        } else {
-            self = aDecoder.decodeSize()
+        guard aDecoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
         }
+        self = aDecoder.decodeSizeForKey("NS.sizeval")
     }
     
     func encodeWithCoder(_ aCoder: NSCoder) {
-        if aCoder.allowsKeyedCoding {
-            aCoder.encodeSize(self, forKey: "NS.sizeval")
-        } else {
-            aCoder.encodeSize(self)
+        guard aCoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
         }
+        aCoder.encodeSize(self, forKey: "NS.sizeval")
     }
     
     static func objCType() -> String {
@@ -187,19 +183,17 @@ extension CGRect: NSSpecialValueCoding {
     }
 
     init?(coder aDecoder: NSCoder) {
-        if aDecoder.allowsKeyedCoding {
-            self = aDecoder.decodeRectForKey("NS.rectval")
-        } else {
-            self = aDecoder.decodeRect()
+        guard aDecoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
         }
+        self = aDecoder.decodeRectForKey("NS.rectval")
     }
     
     func encodeWithCoder(_ aCoder: NSCoder) {
-        if aCoder.allowsKeyedCoding {
-            aCoder.encodeRect(self, forKey: "NS.rectval")
-        } else {
-            aCoder.encodeRect(self)
+        guard aCoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
         }
+        aCoder.encodeRect(self, forKey: "NS.rectval")
     }
     
     static func objCType() -> String {
@@ -444,12 +438,12 @@ public func NSIntegralRectWithOptions(_ aRect: NSRect, _ opts: NSAlignmentOption
         NSUnimplemented()
     }
 
-    var width = Double.nan
-    var height = Double.nan
-    var minX = Double.nan
-    var minY = Double.nan
-    var maxX = Double.nan
-    var maxY = Double.nan
+    var width = CGFloat.NativeType.nan
+    var height = CGFloat.NativeType.nan
+    var minX = CGFloat.NativeType.nan
+    var minY = CGFloat.NativeType.nan
+    var maxX = CGFloat.NativeType.nan
+    var maxY = CGFloat.NativeType.nan
 
     if aRect.size.height.native < 0 {
         height = 0
@@ -538,10 +532,10 @@ public func NSIntegralRectWithOptions(_ aRect: NSRect, _ opts: NSAlignmentOption
         maxY = round(aRect.origin.y.native + aRect.size.height.native)
     }
     
-    var resultOriginX = Double.nan
-    var resultOriginY = Double.nan
-    var resultWidth = Double.nan
-    var resultHeight = Double.nan
+    var resultOriginX = CGFloat.NativeType.nan
+    var resultOriginY = CGFloat.NativeType.nan
+    var resultWidth = CGFloat.NativeType.nan
+    var resultHeight = CGFloat.NativeType.nan
     
     if !minX.isNaN {
         resultOriginX = minX

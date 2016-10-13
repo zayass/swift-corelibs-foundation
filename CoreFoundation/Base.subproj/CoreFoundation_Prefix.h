@@ -73,8 +73,8 @@ typedef char * Class;
 #endif
 
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
-#import <libkern/OSAtomic.h>
-#import <pthread.h>
+#include <libkern/OSAtomic.h>
+#include <pthread.h>
 #endif
 
 /* This macro creates some helper functions which are useful in dealing with libdispatch:
@@ -178,6 +178,11 @@ typedef int		boolean_t;
 
 #include <pthread.h>
 
+#ifdef __ANDROID__
+typedef unsigned long fd_mask;
+#endif
+
+#if !defined(__ANDROID__) && !TARGET_OS_CYGWIN
 CF_INLINE size_t
 strlcpy(char * dst, const char * src, size_t maxlen) {
     const size_t srclen = strlen(src);
@@ -203,8 +208,11 @@ strlcat(char * dst, const char * src, size_t maxlen) {
     }
     return dstlen + srclen;
 }
+#endif
 
+#if !TARGET_OS_CYGWIN
 #define issetugid() 0
+#endif
     
 // Implemented in CFPlatform.c 
 bool OSAtomicCompareAndSwapPtr(void *oldp, void *newp, void *volatile *dst);
@@ -263,7 +271,14 @@ void OSMemoryBarrier();
 
 #endif
 
-#if DEPLOYMENT_TARGET_WINDOWS || DEPLOYMENT_TARGET_LINUX    
+#if TARGET_OS_CYGWIN
+#define HAVE_STRUCT_TIMESPEC 1
+#define strncasecmp_l(a, b, c, d) strncasecmp(a, b, c)
+#define _NO_BOOL_TYPEDEF
+#undef interface
+#endif
+
+#if DEPLOYMENT_TARGET_WINDOWS || DEPLOYMENT_TARGET_LINUX
 #if !defined(MIN)
 #define MIN(A,B)	((A) < (B) ? (A) : (B))
 #endif

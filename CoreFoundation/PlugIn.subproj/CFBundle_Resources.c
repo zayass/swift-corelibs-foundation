@@ -33,7 +33,9 @@
 
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI || DEPLOYMENT_TARGET_LINUX
 #include <unistd.h>
+#if __has_include(<sys/sysctl.h>)
 #include <sys/sysctl.h>
+#endif
 #include <sys/stat.h>
 #include <dirent.h>
 #endif
@@ -313,7 +315,11 @@ CF_EXPORT CFStringRef _CFBundleGetCurrentPlatform(void) {
 #elif DEPLOYMENT_TARGET_HPUX
     return CFSTR("HPUX");
 #elif DEPLOYMENT_TARGET_LINUX
+#if TARGET_OS_CYGWIN
+    return CFSTR("Cygwin");
+#else
     return CFSTR("Linux");
+#endif
 #elif DEPLOYMENT_TARGET_FREEBSD
     return CFSTR("FreeBSD");
 #else
@@ -331,7 +337,11 @@ CF_PRIVATE CFStringRef _CFBundleGetPlatformExecutablesSubdirectoryName(void) {
 #elif DEPLOYMENT_TARGET_HPUX
     return CFSTR("HPUX");
 #elif DEPLOYMENT_TARGET_LINUX
+#if TARGET_OS_CYGWIN
+    return CFSTR("Cygwin");
+#else
     return CFSTR("Linux");
+#endif
 #elif DEPLOYMENT_TARGET_FREEBSD
     return CFSTR("FreeBSD");
 #else
@@ -349,7 +359,11 @@ CF_PRIVATE CFStringRef _CFBundleGetAlternatePlatformExecutablesSubdirectoryName(
 #elif DEPLOYMENT_TARGET_HPUX
     return CFSTR("HP-UX");
 #elif DEPLOYMENT_TARGET_LINUX
+#if TARGET_OS_CYGWIN
+    return CFSTR("Cygwin");
+#else
     return CFSTR("Linux");
+#endif
 #elif DEPLOYMENT_TARGET_FREEBSD
     return CFSTR("FreeBSD");
 #else

@@ -43,23 +43,10 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
     }
     
     public required convenience init?(coder aDecoder: NSCoder) {
-        if !aDecoder.allowsKeyedCoding {
-            var cnt: UInt32 = 0
-            // We're stuck with (int) here (rather than unsigned int)
-            // because that's the way the code was originally written, unless
-            // we go to a new version of the class, which has its own problems.
-            withUnsafeMutablePointer(to: &cnt) { (ptr: UnsafeMutablePointer<UInt32>) -> Void in
-                aDecoder.decodeValue(ofObjCType: "i", at: UnsafeMutableRawPointer(ptr))
-            }
-            let objects = UnsafeMutablePointer<AnyObject>.allocate(capacity: Int(cnt))
-            for idx in 0..<cnt {
-                // If conversion to NSObject fails then we really can't hold it anyway
-                objects.advanced(by: Int(idx)).initialize(to: aDecoder.decodeObject() as! NSObject)
-            }
-            self.init(objects: UnsafePointer<AnyObject>(objects), count: Int(cnt))
-            objects.deinitialize(count: Int(cnt))
-            objects.deallocate(capacity: Int(cnt))
-        } else if type(of: aDecoder) == NSKeyedUnarchiver.self || aDecoder.containsValue(forKey: "NS.objects") {
+        guard aDecoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
+        }
+        if type(of: aDecoder) == NSKeyedUnarchiver.self || aDecoder.containsValue(forKey: "NS.objects") {
             let objects = aDecoder._decodeArrayOfObjectsForKey("NS.objects")
             self.init(array: objects as! [NSObject])
         } else {
@@ -74,6 +61,9 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
     }
     
     open func encode(with aCoder: NSCoder) {
+        guard aCoder.allowsKeyedCoding else {
+            preconditionFailure("Unkeyed coding is unsupported.")
+        }
         if let keyedArchiver = aCoder as? NSKeyedArchiver {
             keyedArchiver._encodeArrayOfObjects(self, forKey:"NS.objects")
         } else {
@@ -407,8 +397,20 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
         return objects
     }
     
-    open func write(toFile path: String, atomically useAuxiliaryFile: Bool) -> Bool { NSUnimplemented() }
-    open func write(to url: URL, atomically: Bool) -> Bool { NSUnimplemented() }
+    open func write(toFile path: String, atomically useAuxiliaryFile: Bool) -> Bool {
+        return write(to: URL(fileURLWithPath: path), atomically: useAuxiliaryFile)
+    }
+    
+    // the atomically flag is ignored if url of a type that cannot be written atomically.
+    open func write(to url: URL, atomically: Bool) -> Bool {
+        do {
+            let pListData = try PropertyListSerialization.data(fromPropertyList: self, format: .xml, options: 0)
+            try pListData.write(to: url, options: atomically ? .atomic : [])
+            return true
+        } catch {
+            return false
+        }
+    }
     
     open func objects(at indexes: IndexSet) -> [Any] {
         var objs = [Any]()
@@ -581,8 +583,20 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
         return lastEqual ? result + 1 : result
     }
     
-    public convenience init?(contentsOfFile path: String) { NSUnimplemented() }
-    public convenience init?(contentsOfURL url: URL) { NSUnimplemented() }
+    public convenience init?(contentsOfFile path: String) {
+        self.init(contentsOfURL: URL(fileURLWithPath: path))
+    }
+    
+    public convenience init?(contentsOfURL url: URL) {
+        do {
+            guard let plistDoc = try? Data(contentsOf: url),
+            let plistArray = try PropertyListSerialization.propertyList(from: plistDoc, options: [], format: nil) as? Array<Any>
+             else { return nil }
+            self.init(array: plistArray)
+        } catch {
+            return nil
+        }
+    }
     
     override open var _cfTypeID: CFTypeID {
         return CFArrayGetTypeID()
