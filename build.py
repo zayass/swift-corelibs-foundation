@@ -378,7 +378,7 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSString.swift',
 	'Foundation/NSStringAPI.swift',
 	'Foundation/NSSwiftRuntime.swift',
-	'Foundation/NSTask.swift',
+	'Foundation/Process.swift',
 	'Foundation/NSTextCheckingResult.swift',
 	'Foundation/NSThread.swift',
 	'Foundation/NSTimer.swift',
@@ -477,7 +477,7 @@ foundation_tests = SwiftExecutable('TestFoundation', [
         'Foundation/ProgressFraction.swift',
 ] + glob.glob('./TestFoundation/Test*.swift')) # all TestSomething.swift are considered sources to the test project in the TestFoundation directory
 
-Configuration.current.extra_ld_flags = '-L'+Configuration.current.variables["LIBDISPATCH_BUILD_DIR"]+'/src/.libs'
+Configuration.current.extra_ld_flags += ' -L'+Configuration.current.variables["LIBDISPATCH_BUILD_DIR"]+'/src/.libs'
 
 foundation_tests.add_dependency(foundation_tests_resources)
 foundation.add_phase(foundation_tests_resources)
