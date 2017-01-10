@@ -140,9 +140,7 @@ open class URLSessionTask : NSObject, NSCopying {
     /// May differ from originalRequest due to http server redirection
     /*@NSCopying*/ open fileprivate(set) var currentRequest: URLRequest? {
         get {
-            var r: URLRequest? = nil
-            taskAttributesIsolation.sync { r = self._currentRequest }
-            return r
+            return taskAttributesIsolation.sync { self._currentRequest }
         }
         //TODO: dispatch_barrier_async
         set { taskAttributesIsolation.async(flags: .barrier) { self._currentRequest = newValue } }
@@ -150,9 +148,7 @@ open class URLSessionTask : NSObject, NSCopying {
     fileprivate var _currentRequest: URLRequest? = nil
     /*@NSCopying*/ open fileprivate(set) var response: URLResponse? {
         get {
-            var r: URLResponse? = nil
-            taskAttributesIsolation.sync { r = self._response }
-            return r
+            return taskAttributesIsolation.sync { self._response }
         }
         set { taskAttributesIsolation.async(flags: .barrier) { self._response = newValue } }
     }
@@ -166,9 +162,7 @@ open class URLSessionTask : NSObject, NSCopying {
     /// Number of body bytes already received
    open fileprivate(set) var countOfBytesReceived: Int64 {
         get {
-            var r: Int64 = 0
-            taskAttributesIsolation.sync { r = self._countOfBytesReceived }
-            return r
+            return taskAttributesIsolation.sync { self._countOfBytesReceived }
         }
         set { taskAttributesIsolation.async(flags: .barrier) { self._countOfBytesReceived = newValue } }
     }
@@ -177,9 +171,7 @@ open class URLSessionTask : NSObject, NSCopying {
     /// Number of body bytes already sent */
     open fileprivate(set) var countOfBytesSent: Int64 {
         get {
-            var r: Int64 = 0
-            taskAttributesIsolation.sync { r = self._countOfBytesSent }
-            return r
+            return taskAttributesIsolation.sync { self._countOfBytesSent }
         }
         set { taskAttributesIsolation.async(flags: .barrier) { self._countOfBytesSent = newValue } }
     }
@@ -209,9 +201,7 @@ open class URLSessionTask : NSObject, NSCopying {
      */
     open var state: URLSessionTask.State {
         get {
-            var r: URLSessionTask.State = .suspended
-            taskAttributesIsolation.sync { r = self._state }
-            return r
+            return taskAttributesIsolation.sync { self._state }
         }
         set { taskAttributesIsolation.async(flags: .barrier) { self._state = newValue } }
     }
@@ -291,20 +281,18 @@ open class URLSessionTask : NSObject, NSCopying {
     /// will be used.
     ///
     /// If no priority is specified, the task will operate with the default priority
-    /// as defined by the constant URLSessionTaskPriorityDefault. Two additional
-    /// priority levels are provided: URLSessionTaskPriorityLow and
-    /// URLSessionTaskPriorityHigh, but use is not restricted to these.
+    /// as defined by the constant URLSessionTask.defaultPriority. Two additional
+    /// priority levels are provided: URLSessionTask.lowPriority and
+    /// URLSessionTask.highPriority, but use is not restricted to these.
     open var priority: Float {
         get {
-            var r: Float = 0
-            taskAttributesIsolation.sync { r = self._priority }
-            return r
+            return taskAttributesIsolation.sync { self._priority }
         }
         set {
             taskAttributesIsolation.async(flags: .barrier) { self._priority = newValue }
         }
     }
-    fileprivate var _priority: Float = URLSessionTaskPriorityDefault
+    fileprivate var _priority: Float = URLSessionTask.defaultPriority
 }
 
 extension URLSessionTask {
@@ -1116,9 +1104,19 @@ fileprivate extension HTTPURLResponse {
     }
 }
 
-public let URLSessionTaskPriorityDefault: Float = 0.5
-public let URLSessionTaskPriorityLow: Float = 0.25
-public let URLSessionTaskPriorityHigh: Float = 0.75
+public extension URLSessionTask {
+    /// The default URL session task priority, used implicitly for any task you 
+    /// have not prioritized. The floating point value of this constant is 0.5.
+    public static let defaultPriority: Float = 0.5
+
+    /// A low URL session task priority, with a floating point value above the 
+    /// minimum of 0 and below the default value.
+    public static let lowPriority: Float = 0.25
+
+    /// A high URL session task priority, with a floating point value above the
+    /// default value and below the maximum of 1.0.
+    public static let highPriority: Float = 0.75
+}
 
 /*
  * An URLSessionDataTask does not provide any additional
