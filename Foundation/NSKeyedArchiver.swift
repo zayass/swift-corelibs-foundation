@@ -126,8 +126,8 @@ open class NSKeyedArchiver : NSCoder {
         return finishedEncoding
     }
     
-    public override init() {
-        NSUnimplemented()
+    public override convenience init() {
+        self.init(forWritingWith: NSMutableData())
     }
     
     private init(output: AnyObject) {
@@ -165,7 +165,12 @@ open class NSKeyedArchiver : NSCoder {
     
     /// If encoding has not yet finished, then invoking this property will call finishEncoding and return the data. If you initialized the keyed archiver with a specific mutable data instance, then it will be returned from this property after finishEncoding is called.
     open var encodedData: Data {
-        NSUnimplemented()
+        
+        if !_flags.contains(.finishedEncoding) {
+            finishEncoding()
+        }
+        
+        return (_stream as! NSData)._swiftObject
     }
 
     open func finishEncoding() {
@@ -428,7 +433,7 @@ open class NSKeyedArchiver : NSCoder {
             
             if let ns = clsv as? NSObject.Type {
                 let classHints = ns.classFallbacksForKeyedArchiver()
-                if classHints.count > 0 {
+                if !classHints.isEmpty {
                     classDict["$classhints"] = classHints
                 }
             }

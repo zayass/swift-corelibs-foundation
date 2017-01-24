@@ -369,7 +369,7 @@ extension NSString {
         return compare(string, options: mask, range: compareRange, locale: nil)
     }
     
-    public func compare(_ string: String, options mask: CompareOptions, range compareRange: NSRange, locale: AnyObject?) -> ComparisonResult {
+    public func compare(_ string: String, options mask: CompareOptions, range compareRange: NSRange, locale: Any?) -> ComparisonResult {
         var res: CFComparisonResult
         if let loc = locale {
             res = CFStringCompareWithOptionsAndLocale(_cfObject, string._cfObject, CFRange(compareRange), mask._cfValue(true), (loc as! NSLocale)._cfObject)
@@ -1183,7 +1183,7 @@ extension NSString {
     }
     
     public convenience init?(data: Data, encoding: UInt) {
-        if data.count == 0 {
+        if data.isEmpty {
             self.init("")
         } else {
         guard let cf = data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> CFString? in

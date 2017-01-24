@@ -112,12 +112,14 @@ extension NSCalendar {
     }
 }
 
-public func ==(_ lhs: NSCalendar.Identifier, _ rhs: NSCalendar.Identifier) -> Bool {
-    return lhs.rawValue == rhs.rawValue
-}
+extension NSCalendar.Identifier {
+    public static func ==(_ lhs: NSCalendar.Identifier, _ rhs: NSCalendar.Identifier) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
 
-public func <(_ lhs: NSCalendar.Identifier, _ rhs: NSCalendar.Identifier) -> Bool {
-    return lhs.rawValue < rhs.rawValue
+    public static func <(_ lhs: NSCalendar.Identifier, _ rhs: NSCalendar.Identifier) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
 }
 
 open class NSCalendar : NSObject, NSCopying, NSSecureCoding {
@@ -603,8 +605,7 @@ open class NSCalendar : NSObject, NSCopying, NSSecureCoding {
             }
 
             return vector.withUnsafeMutableBufferPointer { (vecBuffer: inout UnsafeMutableBufferPointer<UnsafeMutablePointer<Int32>>) in
-                _CFCalendarGetComponentDifferenceV(_cfObject, startingDate.timeIntervalSinceReferenceDate, resultDate.timeIntervalSinceReferenceDate, CFOptionFlags(opts.rawValue), compDesc, vecBuffer.baseAddress!, Int32(vector.count))
-                return false
+                return _CFCalendarGetComponentDifferenceV(_cfObject, startingDate.timeIntervalSinceReferenceDate, resultDate.timeIntervalSinceReferenceDate, CFOptionFlags(opts.rawValue), compDesc, vecBuffer.baseAddress!, Int32(vector.count))
             }
         }
         if res {
@@ -1242,7 +1243,7 @@ open class NSCalendar : NSObject, NSCopying, NSSecureCoding {
 // with distributed notifications.
 
 extension NSNotification.Name {
-    public static let NSCalendarDayChanged = NSNotification.Name(rawValue: "") // NSUnimplemented
+    public static let NSCalendarDayChanged = NSNotification.Name(rawValue: "NSCalendarDayChangedNotification")
 }
 
 // This is a just used as an extensible struct, basically;
