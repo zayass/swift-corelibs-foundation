@@ -811,6 +811,41 @@ private struct JSONReader {
         0x2E, 0x2D, 0x2B, 0x45, 0x65, // . - + E e
     ]
     func parseNumber(_ input: Index, options opt: JSONSerialization.ReadingOptions) throws -> (Any, Index)? {
+        #if !arch(i386) && !arch(arm) // x64
+            func castInt64(_ value: Int64) -> Any {
+                return Int(value)
+            }
+
+            func castUInt64(_ value: UInt64) -> Any {
+                if let result = Int(exactly: value) {
+                    return result
+                }
+
+                return UInt(value)
+            }
+        #else
+            func castInt64(_ value: Int64) -> Any {
+                if let result = Int(exactly: value) {
+                    return result
+                }
+
+                return value
+            }
+
+            func castUInt64(_ value: UInt64) -> Any {
+                if let result = Int(exactly: value) {
+                    return result
+                }
+
+                if let result = Int64(exactly: value) {
+                    return result
+                }
+
+                return value
+            }
+        #endif
+
+
         func parseTypedNumber(_ address: UnsafePointer<UInt8>, count: Int) -> (Any, IndexDistance)? {
             let temp_buffer_size = 64
             var temp_buffer = [Int8](repeating: 0, count: temp_buffer_size)
@@ -822,8 +857,21 @@ private struct JSONReader {
                 defer { intEndPointer.deallocate(capacity: 1) }
                 let doubleEndPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: 1)
                 defer { doubleEndPointer.deallocate(capacity: 1) }
-                let intResult = strtol(startPointer, intEndPointer, 10)
+
+                let isNegative = startPointer.pointee == 0x2D
+                let intResult: Int64
+                let uintResult: UInt64
+
+                if isNegative {
+                    intResult = strtoll(startPointer, intEndPointer, 10)
+                    uintResult = 0
+                } else {
+                    intResult = 0
+                    uintResult = strtoull(startPointer, intEndPointer, 10)
+                }
+
                 let intDistance = startPointer.distance(to: intEndPointer[0]!)
+
                 let doubleResult = strtod(startPointer, doubleEndPointer)
                 let doubleDistance = startPointer.distance(to: doubleEndPointer[0]!)
 
@@ -834,15 +882,23 @@ private struct JSONReader {
                 let shouldUseReferenceType = opt.contains(.useReferenceNumericTypes)
 
                 if intDistance == doubleDistance {
-                    return (shouldUseReferenceType ? NSNumber(value: intResult) : intResult,
-                            intDistance)
+                    if shouldUseReferenceType {
+                        return isNegative
+                            ? (NSNumber(value: intResult) as Any, intDistance)
+                            : (NSNumber(value: uintResult) as Any, intDistance)
+                    }
+
+                    return isNegative
+                        ? (castInt64(intResult), intDistance)
+                        : (castUInt64(uintResult), intDistance)
                 }
+
                 guard doubleDistance > 0 else {
                     return nil
                 }
 
-                if doubleResult == doubleResult.rounded() {
-                    return (shouldUseReferenceType ? NSNumber(value: Int(doubleResult)) : Int(doubleResult),
+                if doubleResult == doubleResult.rounded(), let result = Int(exactly: doubleResult)  {
+                    return (shouldUseReferenceType ? NSNumber(value: result) : result,
                             doubleDistance)
                 }
 
