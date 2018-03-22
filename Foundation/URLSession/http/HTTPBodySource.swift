@@ -86,6 +86,42 @@ extension _HTTPBodyDataSource : _HTTPBodySource {
     }
 }
 
+/// A HTTP body data source backed by InputStream.
+internal final class _HTTPBodyStreamSource {
+    
+    let inputStream: InputStream
+    
+    init(inputStream: InputStream ) {
+        self.inputStream = inputStream
+    }
+    
+}
+
+extension _HTTPBodyStreamSource : _HTTPBodySource {
+    
+    func getNextChunk(withLength length: Int) -> _HTTPBodySourceDataChunk {
+        if inputStream.hasBytesAvailable {
+            let buffer = UnsafeMutableRawBufferPointer.allocate(count: length)
+            guard let pointer = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return .error
+            }
+            let readBytes = self.inputStream.read(pointer, maxLength: length)
+            if readBytes > 0 {
+                let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(buffer))
+                return .data(dispatchData.subdata(in: 0 ..< readBytes))                
+            }
+            else if readBytes == 0 {
+                return .done
+            }
+            else {
+                return .error
+            }
+        }
+        else {
+            return .done
+        }
+    }
+}
 
 /// A HTTP body data source backed by a file.
 ///
