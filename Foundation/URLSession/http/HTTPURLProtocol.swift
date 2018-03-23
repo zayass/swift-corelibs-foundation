@@ -950,6 +950,10 @@ extension _HTTPURLProtocol {
         }
     }
     
+    func set(trustAllCertificates: Bool) {
+        easyHandle.set(trustAllCertificates: trustAllCertificates)
+    }
+    
 }
 
 fileprivate extension HTTPURLResponse {
