@@ -314,6 +314,7 @@
 		6EB768281D18C12C00D4B719 /* UUID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB768271D18C12C00D4B719 /* UUID.swift */; };
 		7900433B1CACD33E00ECCBF1 /* TestNSCompoundPredicate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 790043391CACD33E00ECCBF1 /* TestNSCompoundPredicate.swift */; };
 		7900433C1CACD33E00ECCBF1 /* TestNSPredicate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7900433A1CACD33E00ECCBF1 /* TestNSPredicate.swift */; };
+		84D890192063DFB700225D3C /* TestURLSessionRealServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D890182063DFB600225D3C /* TestURLSessionRealServer.swift */; };
 		90E645DF1E4C89A400D0D47C /* TestNSCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E645DE1E4C89A400D0D47C /* TestNSCache.swift */; };
 		9F0DD3521ECD73D000F68030 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F0041781ECD5962004138BD /* main.swift */; };
 		9F0DD3531ECD73D200F68030 /* XDGTestHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4ADBD21ECD506E001F0B3D /* XDGTestHelper.swift */; };
@@ -781,6 +782,7 @@
 		844DC3321C17584F005611F9 /* TestScanner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestScanner.swift; sourceTree = "<group>"; };
 		848A30571C137B3500C83206 /* TestHTTPCookie.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TestHTTPCookie.swift; path = TestFoundation/TestHTTPCookie.swift; sourceTree = SOURCE_ROOT; };
 		84BA558D1C16F90900F48C54 /* TestTimeZone.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestTimeZone.swift; sourceTree = "<group>"; };
+		84D890182063DFB600225D3C /* TestURLSessionRealServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestURLSessionRealServer.swift; sourceTree = "<group>"; };
 		88D28DE61C13AE9000494606 /* TestNSGeometry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestNSGeometry.swift; sourceTree = "<group>"; };
 		90E645DE1E4C89A400D0D47C /* TestNSCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestNSCache.swift; sourceTree = "<group>"; };
 		9F0041781ECD5962004138BD /* main.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -1489,6 +1491,7 @@
 				83712C8D1C1684900049AD49 /* TestNSURLRequest.swift */,
 				7A7D6FBA1C16439400957E2E /* TestURLResponse.swift */,
 				5B1FD9E21D6D17B80080E83C /* TestURLSession.swift */,
+				84D890182063DFB600225D3C /* TestURLSessionRealServer.swift */,
 				555683BC1C1250E70041D4C6 /* TestUserDefaults.swift */,
 				C2A9D75B1C15C08B00993803 /* TestNSUUID.swift */,
 				D3047AEB1C38BC3300295652 /* TestNSValue.swift */,
@@ -2411,6 +2414,7 @@
 				5B13B3301C582D4C00651CE2 /* TestHTTPCookie.swift in Sources */,
 				5B13B3361C582D4C00651CE2 /* TestNSLocale.swift in Sources */,
 				5B13B3391C582D4C00651CE2 /* TestNSNull.swift in Sources */,
+				84D890192063DFB700225D3C /* TestURLSessionRealServer.swift in Sources */,
 				BD8042161E09857800487EB8 /* TestLengthFormatter.swift in Sources */,
 				5B13B3421C582D4C00651CE2 /* TestRunLoop.swift in Sources */,
 				5B13B34E1C582D4C00651CE2 /* TestXMLDocument.swift in Sources */,
