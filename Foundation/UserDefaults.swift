@@ -322,6 +322,7 @@ open class UserDefaults: NSObject {
     open func setPersistentDomain(_ domain: [String : Any], forName domainName: String) { NSUnimplemented() }
     open func removePersistentDomain(forName domainName: String) { NSUnimplemented() }
     
+    @discardableResult
     open func synchronize() -> Bool {
         return CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication)
     }
