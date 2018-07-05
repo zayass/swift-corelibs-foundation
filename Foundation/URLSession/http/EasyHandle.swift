@@ -57,7 +57,14 @@ internal final class _EasyHandle {
     fileprivate var pauseState: _PauseState = []
     internal var timeoutTimer: _TimeoutSource!
     internal lazy var errorBuffer = [UInt8](repeating: 0, count: Int(CFURLSessionEasyErrorSize))
-
+    
+    fileprivate let nsURLAuthMethodsToCURL = [
+        NSURLAuthenticationMethodHTTPBasic : CFURLSessionOptionAUTH_BASIC,
+        NSURLAuthenticationMethodHTTPDigest : CFURLSessionOptionAUTH_DIGEST,
+        NSURLAuthenticationMethodNTLM : CFURLSessionOptionAUTH_NTLM,
+        NSURLAuthenticationMethodNegotiate: CFURLSessionOptionAUTH_NEGOTIATE
+    ]
+    
     init(delegate: _EasyHandleDelegate) {
         self.delegate = delegate
         setupCallbacks()
@@ -268,17 +275,24 @@ extension _EasyHandle {
     func set(username: String, password: String) {
         "\(username):\(password)".withCString {
             CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionUSERPWD, UnsafeMutablePointer(mutating: $0))
-            CFURLSession_easy_setopt_unsigned_long(rawHandle, CFURLSessionOptionHTTPAUTH, CFURLSessionOptionAUTH_ANY)
         }
     }
-    
+
+    func set(authMethod: String) -> Bool {
+        if let method = nsURLAuthMethodsToCURL[authMethod] {
+            CFURLSession_easy_setopt_unsigned_long(rawHandle, CFURLSessionOptionHTTPAUTH, method)
+            return true
+        }
+
+        return false
+    }
+
     func set(trustAllCertificates: Bool) {
         let verifyPeer = trustAllCertificates ? 0 : 1
         let verifyHost = trustAllCertificates ? 0 : 1
         CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionSSL_VERIFYPEER, verifyPeer)
         CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionSSL_VERIFYHOST, verifyHost)
     }
-
 }
 
 fileprivate func printLibcurlDebug(handle: CFURLSessionEasyHandle, type: CInt, data: UnsafeMutablePointer<Int8>, size: Int, userInfo: UnsafeMutableRawPointer?) -> CInt {

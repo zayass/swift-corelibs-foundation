@@ -105,11 +105,19 @@ public let NSURLAuthenticationMethodServerTrust: String = "NSURLAuthenticationMe
     @discussion This class represents a protection space requiring authentication.
 */
 open class URLProtectionSpace : NSObject, NSSecureCoding, NSCopying {
-    
+
+    private let _host: String
+    private let _isProxy: Bool
+    private let _proxyType: String?
+    private let _port: Int
+    private let _protocol: String?
+    private let _realm: String?
+    private let _authenticationMethod: String
+
     open override func copy() -> Any {
         return copy(with: nil)
     }
-    
+
     open func copy(with zone: NSZone? = nil) -> Any { NSUnimplemented() }
     public static var supportsSecureCoding: Bool { return true }
 
@@ -119,8 +127,8 @@ open class URLProtectionSpace : NSObject, NSSecureCoding, NSCopying {
     public required init?(coder aDecoder: NSCoder) {
         NSUnimplemented()
     }
-    
-    
+
+
     /*!
         @method initWithHost:port:protocol:realm:authenticationMethod:
         @abstract Initialize a protection space representing an origin server, or a realm on one
@@ -135,8 +143,16 @@ open class URLProtectionSpace : NSObject, NSSecureCoding, NSCopying {
         valid values include nil (default method), @"digest" and @"form".
         @result The initialized object.
     */
-    public init(host: String, port: Int, protocol: String?, realm: String?, authenticationMethod: String?) { NSUnimplemented() }
-    
+    public init(host: String, port: Int, protocol: String?, realm: String?, authenticationMethod: String?) {
+        _host = host
+        _port = port
+        _protocol = `protocol`
+        _realm = realm
+        _authenticationMethod = authenticationMethod ?? NSURLAuthenticationMethodDefault
+        _proxyType = nil
+        _isProxy = false
+    }
+
     /*!
         @method initWithProxyHost:port:type:realm:authenticationMethod:
         @abstract Initialize a protection space representing a proxy server, or a realm on one
@@ -151,8 +167,16 @@ open class URLProtectionSpace : NSObject, NSSecureCoding, NSCopying {
         valid values include nil (default method) and @"digest"
         @result The initialized object.
     */
-    public init(proxyHost host: String, port: Int, type: String?, realm: String?, authenticationMethod: String?) { NSUnimplemented() }
-    
+    public init(proxyHost host: String, port: Int, type: String?, realm: String?, authenticationMethod: String?) {
+        _host = host
+        _port = port
+        _proxyType = type
+        _realm = realm
+        _authenticationMethod = authenticationMethod ?? NSURLAuthenticationMethodDefault
+        _isProxy = true
+        _protocol = nil
+    }
+
     /*!
         @method realm
         @abstract Get the authentication realm for which the protection space that
@@ -161,60 +185,203 @@ open class URLProtectionSpace : NSObject, NSSecureCoding, NSCopying {
         authentication, and may be nil otherwise.
         @result The realm string
     */
-    open var realm: String? { NSUnimplemented() }
-    
+    open var realm: String? {
+        return _realm
+    }
+
     /*!
         @method receivesCredentialSecurely
         @abstract Determine if the password for this protection space can be sent securely
         @result YES if a secure authentication method or protocol will be used, NO otherwise
     */
     open var receivesCredentialSecurely: Bool { NSUnimplemented() }
-    
-    /*!
-        @method isProxy
-        @abstract Determine if this authenticating protection space is a proxy server
-        @result YES if a proxy, NO otherwise
-    */
-    
+
     /*!
         @method host
         @abstract Get the proxy host if this is a proxy authentication, or the host from the URL.
         @result The host for this protection space.
     */
-    open var host: String { NSUnimplemented() }
-    
+    open var host: String {
+        return _host
+    }
+
     /*!
         @method port
         @abstract Get the proxy port if this is a proxy authentication, or the port from the URL.
         @result The port for this protection space, or 0 if not set.
     */
-    open var port: Int { NSUnimplemented() }
-    
+    open var port: Int {
+        return _port
+    }
+
     /*!
         @method proxyType
         @abstract Get the type of this protection space, if a proxy
         @result The type string, or nil if not a proxy.
      */
-    open var proxyType: String? { NSUnimplemented() }
-    
+    open var proxyType: String? {
+        return _proxyType
+    }
+
     /*!
         @method protocol
         @abstract Get the protocol of this protection space, if not a proxy
         @result The type string, or nil if a proxy.
     */
-    open var `protocol`: String? { NSUnimplemented() }
-    
+    open var `protocol`: String? {
+        return _protocol
+    }
+
     /*!
         @method authenticationMethod
         @abstract Get the authentication method to be used for this protection space
         @result The authentication method
     */
-    open var authenticationMethod: String { NSUnimplemented() }
-    open override func isProxy() -> Bool { NSUnimplemented() }
+    open var authenticationMethod: String {
+        return _authenticationMethod
+    }
+
+    /*!
+        @method isProxy
+        @abstract Determine if this authenticating protection space is a proxy server
+        @result YES if a proxy, NO otherwise
+    */
+    open override func isProxy() -> Bool {
+        return _isProxy
+    }
+
+    /*!
+       A string that represents the contents of the URLProtectionSpace Object.
+       This property is intended to produce readable output.
+    */
+    open override var description: String {
+        let authMethods: Set<String> = [
+            NSURLAuthenticationMethodDefault,
+            NSURLAuthenticationMethodHTTPBasic,
+            NSURLAuthenticationMethodHTTPDigest,
+            NSURLAuthenticationMethodHTMLForm,
+            NSURLAuthenticationMethodNTLM,
+            NSURLAuthenticationMethodNegotiate,
+            NSURLAuthenticationMethodClientCertificate,
+            NSURLAuthenticationMethodServerTrust
+        ]
+        var result = "<\(type(of: self)) \(Unmanaged.passUnretained(self).toOpaque())>: "
+        result += "Host:\(host), "
+
+        if let prot = self.protocol {
+            result += "Server:\(prot), "
+        } else {
+            result += "Server:(null), "
+        }
+
+        if authMethods.contains(self.authenticationMethod) {
+            result += "Auth-Scheme:\(self.authenticationMethod), "
+        } else {
+            result += "Auth-Scheme:NSURLAuthenticationMethodDefault, "
+        }
+
+        if let realm = self.realm {
+            result += "Realm:\(realm), "
+        } else {
+            result += "Realm:(null), "
+        }
+
+        result += "Port:\(self.port), "
+
+        if _isProxy {
+            result += "Proxy:YES, "
+        } else {
+            result += "Proxy:NO, "
+        }
+
+        if let proxyType = self.proxyType {
+            result += "Proxy-Type:\(proxyType), "
+        } else {
+            result += "Proxy-Type:(null)"
+        }
+        return result
+    }
 }
 
+open class AuthProtectionSpace: URLProtectionSpace {
+    //an internal helper to create a URLProtectionSpace from a HTTPURLResponse
+    static func createByHeaders(using response: HTTPURLResponse) -> URLProtectionSpace {
+        let host = response.url?.host ?? ""
+        let port = response.url?.port ?? 80        //we're doing http
+        let schemeProtocol = response.url?.scheme
+        for (key, val) in response.allHeaderFields {
+            if let headerKey = key as? String,
+               headerKey.trimmingCharacters(in: .whitespacesAndNewlines) == "www-authenticate",
+               let wwwAuthHeaderValue = val as? String {
+
+                let components = wwwAuthHeaderValue.components(separatedBy: " ")
+
+                var authMethod = !components.isEmpty ? components[0].lowercased() : ""
+
+                // to NSURLAuthenticationMethod format
+                if authMethod == "basic" {
+                    authMethod = NSURLAuthenticationMethodHTTPBasic
+                } else if authMethod == "digest" {
+                    authMethod = NSURLAuthenticationMethodHTTPDigest
+                } else if authMethod == "ntlm" {
+                    authMethod = NSURLAuthenticationMethodNTLM
+                } else if authMethod == "negotiate" {
+                    authMethod = NSURLAuthenticationMethodNegotiate
+                } else {
+                    authMethod = ""
+                }
+
+                if !authMethod.isEmpty {
+                    var realm = ""
+                    do {
+                        let pattern = "realm=(\"|')(.*?)(\"|')"
+                        let regex = try NSRegularExpression(pattern: pattern)
+                        let result = regex.matches(in: wwwAuthHeaderValue,
+                                range: NSMakeRange.init(0, wwwAuthHeaderValue.utf16.count))
+                        if !result.isEmpty && result[0].numberOfRanges == 4 {
+                            let part = result[0].range(at: 2)
+                            realm = String(wwwAuthHeaderValue.dropFirst(part.lowerBound).prefix(part.length))
+                        }
+                    } catch {
+
+                    }
+
+                    return AuthProtectionSpace(host: host,
+                            port: port,
+                            protocol: schemeProtocol,
+                            realm: realm,
+                            authenticationMethod: authMethod)
+                }
+            }
+        }
+        return nil
+    }
+
+    static func createAllPossible(using response: HTTPURLResponse) -> [URLProtectionSpace] {
+        let host = response.url?.host ?? ""
+        let port = response.url?.port ?? 80
+        let schemeProtocol = response.url?.scheme
+
+        let authMethods = [
+            NSURLAuthenticationMethodHTTPBasic,
+            NSURLAuthenticationMethodHTTPDigest,
+            NSURLAuthenticationMethodNTLM,
+            NSURLAuthenticationMethodNegotiate
+        ]
+
+        return authMethods.map { authMethod in
+            return AuthProtectionSpace(host: host,
+                    port: port,
+                    protocol: schemeProtocol,
+                    realm: "",
+                    authenticationMethod: authMethod)
+        }
+    }
+}
+
+
 extension URLProtectionSpace {
-    
+
     /*!
         @method distinguishedNames
         @abstract Returns an array of acceptable certificate issuing authorities for client certification authentication. Issuers are identified by their distinguished name and returned as a DER encoded data.
@@ -226,7 +393,7 @@ extension URLProtectionSpace {
 // TODO: Currently no implementation of Security.framework
 /*
 extension URLProtectionSpace {
-    
+
     /*!
         @method serverTrust
         @abstract Returns a SecTrustRef which represents the state of the servers SSL transaction state

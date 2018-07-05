@@ -11,7 +11,9 @@ import CoreFoundation
 import Dispatch
 
 internal class _HTTPURLProtocol: URLProtocol {
-
+    var urlCredentials: URLCredential?
+    var trustAllCertificates: Bool?
+    
     fileprivate var easyHandle: _EasyHandle!
     fileprivate lazy var tempFileURL: URL = {
         let fileName = NSTemporaryDirectory() + NSUUID().uuidString + ".tmp"
@@ -676,6 +678,7 @@ internal extension _HTTPURLProtocol {
         guard let url = request.url else { fatalError("No URL in request.") }
 
         self.internalState = .transferReady(createTransferState(url: url, workQueue: t.workQueue))
+
         configureEasyHandle(for: request)
         if (t.suspendCount) < 1 {
             resume()
@@ -943,17 +946,21 @@ internal extension _HTTPURLProtocol {
 }
 
 extension _HTTPURLProtocol {
-    
     func set(credential: URLCredential) {
+        self.urlCredentials = credential
         if let username = credential.user, let password = credential.password {
             easyHandle.set(username: username, password: password)
         }
     }
-    
+
     func set(trustAllCertificates: Bool) {
+        self.trustAllCertificates = trustAllCertificates
         easyHandle.set(trustAllCertificates: trustAllCertificates)
     }
-    
+
+    func set(authMethod: String) -> Bool {
+        return easyHandle.set(authMethod: authMethod)
+    }
 }
 
 fileprivate extension HTTPURLResponse {
