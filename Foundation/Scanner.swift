@@ -391,60 +391,70 @@ extension String {
 extension Scanner {
     
     // On overflow, the below methods will return success and clamp
+    @discardableResult
     public func scanInt32(_ result: UnsafeMutablePointer<Int32>) -> Bool {
         return _scanString.scan(_skipSet, locationToScanFrom: &_scanLocation) { (value: Int32) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanInt(_ result: UnsafeMutablePointer<Int>) -> Bool {
         return _scanString.scan(_skipSet, locationToScanFrom: &_scanLocation) { (value: Int) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanInt64(_ result: UnsafeMutablePointer<Int64>) -> Bool {
         return _scanString.scan(_skipSet, locationToScanFrom: &_scanLocation) { (value: Int64) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanUnsignedLongLong(_ result: UnsafeMutablePointer<UInt64>) -> Bool {
         return _scanString.scan(_skipSet, locationToScanFrom: &_scanLocation) { (value: UInt64) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanFloat(_ result: UnsafeMutablePointer<Float>) -> Bool {
         return _scanString.scan(_skipSet, locale: locale, locationToScanFrom: &_scanLocation) { (value: Float) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanDouble(_ result: UnsafeMutablePointer<Double>) -> Bool {
         return _scanString.scan(_skipSet, locale: locale, locationToScanFrom: &_scanLocation) { (value: Double) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanHexInt32(_ result: UnsafeMutablePointer<UInt32>) -> Bool {
         return _scanString.scanHex(_skipSet, locationToScanFrom: &_scanLocation) { (value: UInt32) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanHexInt64(_ result: UnsafeMutablePointer<UInt64>) -> Bool {
         return _scanString.scanHex(_skipSet, locationToScanFrom: &_scanLocation) { (value: UInt64) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanHexFloat(_ result: UnsafeMutablePointer<Float>) -> Bool {
         return _scanString.scanHex(_skipSet, locale: locale, locationToScanFrom: &_scanLocation) { (value: Float) -> Void in
             result.pointee = value
         }
     }
     
+    @discardableResult
     public func scanHexDouble(_ result: UnsafeMutablePointer<Double>) -> Bool {
         return _scanString.scanHex(_skipSet, locale: locale, locationToScanFrom: &_scanLocation) { (value: Double) -> Void in
             result.pointee = value
@@ -652,6 +662,7 @@ extension Scanner {
         return nil
     }
     
+    @discardableResult
     public func scanUpToCharacters(from set: CharacterSet, into ptr: UnsafeMutablePointer<String?>?) -> Bool {
         if let result = scanUpToCharactersFromSet(set) {
             ptr?.pointee = result
