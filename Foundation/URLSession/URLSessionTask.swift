@@ -109,8 +109,6 @@ open class URLSessionTask : NSObject, NSCopying {
     /// May be nil if this is a stream task
     /*@NSCopying*/ open let originalRequest: URLRequest?
 
-    var authRequest: URLRequest? = nil
-
     fileprivate var previousFailureCount = 0
     fileprivate var protectionSpaces: [URLProtectionSpace] = []
     fileprivate var protectionSpacesInited = false
@@ -517,7 +515,7 @@ open class URLSessionStreamTask : URLSessionTask {
 /* Key in the userInfo dictionary of an NSError received during a failed download. */
 public let URLSessionDownloadTaskResumeData: String = "NSURLSessionDownloadTaskResumeData"
 
-extension _ProtocolClient : URLProtocolClient {
+extension _ProtocolClient: URLProtocolClient {
 
     func urlProtocol(_ protocol: URLProtocol, didReceive response: URLResponse, cacheStoragePolicy policy: URLCache.StoragePolicy) {
         guard let task = `protocol`.task else { fatalError("Received response, but there's no task.") }
@@ -548,6 +546,7 @@ extension _ProtocolClient : URLProtocolClient {
         case .taskDelegate(let delegate):
             session.delegateQueue.addOperation {
                 let authScheme = challenge.protectionSpace.authenticationMethod
+
                 delegate.urlSession(session, task: task, didReceive: challenge) { disposition, credential in
                     switch disposition {
                     case .useCredential:
@@ -556,6 +555,7 @@ extension _ProtocolClient : URLProtocolClient {
                         // Read props from protocol
                         var protocolCredentials: URLCredential?
                         var protocolTrust: Bool?
+
                         if let taskProtocol = task._protocol as? _HTTPURLProtocol {
                             protocolCredentials = taskProtocol.urlCredentials
                             protocolTrust = taskProtocol.trustAllCertificates
@@ -572,7 +572,7 @@ extension _ProtocolClient : URLProtocolClient {
                         }
 
                         task._protocol = _HTTPURLProtocol(task: task, cachedResponse: nil, client: nil)
-
+                        
                         if let credential = protocolCredentials {
                             task.setCredentials(credential)
                         }
@@ -612,10 +612,10 @@ extension _ProtocolClient : URLProtocolClient {
         guard let response = task.response as? HTTPURLResponse else { fatalError("No response") }
 
         if response.statusCode == 401 {
-            // concate protection space from header and all posible protection spaces
+            // Concat protection space from header with all possibles protection spaces
             if !task.protectionSpacesInited { // init protection spaces
                 var allPossibleProtectionSpaces = AuthProtectionSpace.createAllPossible(using: response)
-                if let protectionSpaceFromHeader = AuthProtectionSpace.create(using:response) {
+                if let protectionSpaceFromHeader = AuthProtectionSpace.createByHeaders(using: response) {
                     allPossibleProtectionSpaces.insert(protectionSpaceFromHeader, at: 0)
                 }
 

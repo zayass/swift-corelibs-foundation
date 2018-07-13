@@ -11,6 +11,10 @@ import CoreFoundation
 import Dispatch
 
 internal class _HTTPURLProtocol: URLProtocol {
+    enum _Error: Error {
+        case cannotSeek
+    }
+
     var urlCredentials: URLCredential?
     var trustAllCertificates: Bool?
     
@@ -569,30 +573,43 @@ extension _HTTPURLProtocol: _EasyHandleDelegate {
             redirectFor(request: newRequest)
         }
     }
-
+    
     func seekInputStream(to position: UInt64) throws {
-        // We will reset the body sourse and seek forward.
-        guard let session = task?.session as? URLSession else { fatalError() }
-        if let delegate = session.delegate as? URLSessionTaskDelegate {
-            delegate.urlSession(session, task: task!, needNewBodyStream: { [weak self] inputStream in
-                if let strongSelf = self, let url = strongSelf.request.url, let inputStream = inputStream {
-                    switch strongSelf.internalState {
-                    case .transferInProgress(let currentTransferState):
-                        switch currentTransferState.requestBodySource {
-                        case is _HTTPBodyStreamSource:
-                            let drain = strongSelf.createTransferBodyDataDrain()
+        switch self.internalState {
+            case .transferReady(let currentTransferState):
+                 if currentTransferState.requestBodySource is _HTTPBodyStreamSource,
+                           let session = task?.session as? URLSession,
+                           let delegate = session.delegate as? URLSessionTaskDelegate,
+                           let url = self.request.url,
+                           let urlSessionTask = task {
+
+                    // We assume that this closure not @escaping - because it can be called from curl(https://curl.haxx.se/libcurl/c/CURLOPT_SEEKFUNCTION.html)
+                    delegate.urlSession(session, task: urlSessionTask, needNewBodyStream: { inputStream in
+                        if let inputStream = inputStream {
+                            if inputStream.streamStatus == .notOpen {
+                                inputStream.open()
+                            }
+                            
                             let source = _HTTPBodyStreamSource(inputStream: inputStream)
-                            let transferState = _HTTPTransferState(url: url, bodyDataDrain: drain, bodySource: source)
-                            strongSelf.internalState = .transferInProgress(transferState)
-                        default:
-                            NSUnimplemented()
+                            let transferState = _HTTPTransferState(url: url,
+                                                                   bodyDataDrain: self.createTransferBodyDataDrain(),
+                                                                   bodySource: source)
+                            self.internalState = .transferInProgress(transferState)
                         }
-                    default:
-                        //TODO: it's possible?
-                        break
-                    }
+                    })
+                } else if let bodyStreamSource = currentTransferState.requestBodySource,
+                    let url = self.request.url {
+                    try bodyStreamSource.seekTo(to: position)
+                    let transferState = _HTTPTransferState(url: url,
+                            bodyDataDrain: self.createTransferBodyDataDrain(),
+                            bodySource: bodyStreamSource)
+
+                    self.internalState = .transferInProgress(transferState)
+                } else {
+                    throw _Error.cannotSeek
                 }
-            })
+            default:
+                throw _Error.cannotSeek
         }
     }
  
@@ -690,9 +707,21 @@ internal extension _HTTPURLProtocol {
             guard let r = task?.originalRequest else { fatalError("Task has no original request.") }
             startNewTransfer(with: r)
         }
-        
+
         if case .transferReady(let transferState) = self.internalState {
-            self.internalState = .transferInProgress(transferState)
+            if let streamSource = transferState.requestBodySource as? _HTTPBodyStreamSource,
+               [.atEnd, .closed, .reading].contains(streamSource.inputStream.streamStatus) {
+
+                try? self.seekInputStream(to: 0)
+
+                // Check if state not changed
+                if case .transferReady(let transferState) = self.internalState {
+                    self.internalState = .transferInProgress(transferState)
+                }
+
+            } else {
+                self.internalState = .transferInProgress(transferState)
+            }
         }
     }
 

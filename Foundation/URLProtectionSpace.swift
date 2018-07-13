@@ -305,7 +305,7 @@ open class URLProtectionSpace : NSObject, NSSecureCoding, NSCopying {
 
 open class AuthProtectionSpace: URLProtectionSpace {
     //an internal helper to create a URLProtectionSpace from a HTTPURLResponse
-    static func createByHeaders(using response: HTTPURLResponse) -> URLProtectionSpace {
+    static func createByHeaders(using response: HTTPURLResponse) -> URLProtectionSpace? {
         let host = response.url?.host ?? ""
         let port = response.url?.port ?? 80        //we're doing http
         let schemeProtocol = response.url?.scheme
@@ -337,7 +337,7 @@ open class AuthProtectionSpace: URLProtectionSpace {
                         let pattern = "realm=(\"|')(.*?)(\"|')"
                         let regex = try NSRegularExpression(pattern: pattern)
                         let result = regex.matches(in: wwwAuthHeaderValue,
-                                range: NSMakeRange.init(0, wwwAuthHeaderValue.utf16.count))
+                                range: NSMakeRange(0, wwwAuthHeaderValue.utf16.count))
                         if !result.isEmpty && result[0].numberOfRanges == 4 {
                             let part = result[0].range(at: 2)
                             realm = String(wwwAuthHeaderValue.dropFirst(part.lowerBound).prefix(part.length))

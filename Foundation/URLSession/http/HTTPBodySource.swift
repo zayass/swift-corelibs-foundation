@@ -47,6 +47,8 @@ internal protocol _HTTPBodySource: class {
     /// return `.done`. Since this is non-blocking, it will return `.retryLater`
     /// if no data is available at this point, but will be available later.
     func getNextChunk(withLength length: Int) -> _HTTPBodySourceDataChunk
+
+    func seekTo(to position: UInt64) throws
 }
 internal enum _HTTPBodySourceDataChunk {
     case data(DispatchData)
@@ -56,18 +58,38 @@ internal enum _HTTPBodySourceDataChunk {
     case retryLater
     case error
 }
+enum _HTTPBodySourceError: Error {
+    case cannotSeek
+}
 
 /// A HTTP body data source backed by `dispatch_data_t`.
 internal final class _HTTPBodyDataSource {
-    var data: DispatchData! 
+    var data: DispatchData!
+    var originalData: DispatchData!
     init(data: DispatchData) {
         self.data = data
+        self.originalData = data
     }
 }
 
-extension _HTTPBodyDataSource : _HTTPBodySource {
+
+extension _HTTPBodyDataSource: _HTTPBodySource {
     enum _Error : Error {
         case unableToRewindData
+    }
+
+    func rewind() {
+        data = originalData
+    }
+
+
+    func seekTo(to position: UInt64) throws {
+        if position >= originalData.count {
+            throw _HTTPBodySourceError.cannotSeek
+        }
+
+        rewind()
+        data = data.subdata(in: 0..<Int(position))
     }
 
     func getNextChunk(withLength length: Int) -> _HTTPBodySourceDataChunk {
@@ -88,17 +110,18 @@ extension _HTTPBodyDataSource : _HTTPBodySource {
 
 /// A HTTP body data source backed by InputStream.
 internal final class _HTTPBodyStreamSource {
-    
     let inputStream: InputStream
     
     init(inputStream: InputStream ) {
         self.inputStream = inputStream
     }
-    
 }
 
-extension _HTTPBodyStreamSource : _HTTPBodySource {
-    
+extension _HTTPBodyStreamSource: _HTTPBodySource {
+    func seekTo(to position: UInt64) throws {
+        // You need manually recreate or extend an InputStream, it cannot done by general InputStream
+        throw _HTTPBodySourceError.cannotSeek
+    }
     func getNextChunk(withLength length: Int) -> _HTTPBodySourceDataChunk {
         if inputStream.hasBytesAvailable {
             let buffer = UnsafeMutableRawBufferPointer.allocate(count: length)
@@ -245,6 +268,10 @@ fileprivate extension _HTTPBodyFileSource {
 }
 
 extension _HTTPBodyFileSource : _HTTPBodySource {
+    func seekTo(to position: UInt64) throws {
+        throw _HTTPBodySourceError.cannotSeek
+    }
+    
     func getNextChunk(withLength length: Int) -> _HTTPBodySourceDataChunk {    
         switch availableChunk {
         case .empty:
