@@ -407,11 +407,13 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
         return objects
     }
     
+    @discardableResult
     open func write(toFile path: String, atomically useAuxiliaryFile: Bool) -> Bool {
         return write(to: URL(fileURLWithPath: path), atomically: useAuxiliaryFile)
     }
     
     // the atomically flag is ignored if url of a type that cannot be written atomically.
+    @discardableResult
     open func write(to url: URL, atomically: Bool) -> Bool {
         do {
             let pListData = try PropertyListSerialization.data(fromPropertyList: self, format: .xml, options: 0)
