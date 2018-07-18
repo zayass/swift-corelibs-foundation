@@ -89,7 +89,7 @@ extension _HTTPBodyDataSource: _HTTPBodySource {
         }
 
         rewind()
-        data = data.subdata(in: 0..<Int(position))
+        data = data.subdata(in: Int(position)..<data.count)
     }
 
     func getNextChunk(withLength length: Int) -> _HTTPBodySourceDataChunk {

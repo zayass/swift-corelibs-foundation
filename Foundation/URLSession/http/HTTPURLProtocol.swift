@@ -582,8 +582,6 @@ extension _HTTPURLProtocol: _EasyHandleDelegate {
                            let delegate = session.delegate as? URLSessionTaskDelegate,
                            let url = self.request.url,
                            let urlSessionTask = task {
-
-                    // We assume that this closure not @escaping - because it can be called from curl(https://curl.haxx.se/libcurl/c/CURLOPT_SEEKFUNCTION.html)
                     delegate.urlSession(session, task: urlSessionTask, needNewBodyStream: { inputStream in
                         if let inputStream = inputStream {
                             if inputStream.streamStatus == .notOpen {
